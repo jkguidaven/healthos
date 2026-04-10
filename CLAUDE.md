@@ -60,6 +60,60 @@ pnpm prompt:test food-scan / workout-plan / coach
 - **Use `npx expo install` for all Expo and React Native packages** — never `pnpm add` them directly. `npx expo install` resolves the version that matches the installed Expo SDK; `pnpm add` pulls latest, which is almost always wrong (e.g. installs SDK 55 packages onto an SDK 54 project). After installing, verify with `npx expo install --check`. If the warning ever appears, run `npx expo install --fix` to realign every drifted package in one shot. This applies to: anything starting with `expo-`, `@expo/`, `react-native-`, `react-native`, `react`, and any package the Expo team manages compatibility for (e.g. `react-native-svg`, `react-native-screens`, `react-native-safe-area-context`, `react-native-reanimated`, `jest-expo`).
 - **Always invoke the `frontend-design` skill before building or modifying any UI** — screens, components, modals, layouts, anything visual. The skill enforces distinctive, production-grade aesthetics and avoids generic AI defaults. Generic centered cards, default Tailwind grays, plain "screen title + form fields + button" stacks are NOT acceptable. Every screen should have intentional hierarchy, considered spacing, real visual weight, and feel like something a senior product designer signed off on. The wireframe specs in `HEALTHOS_UX_WIREFRAMES.md` describe layout structure, not aesthetic — go beyond the minimum and make it look polished.
 
+## Design system
+
+HealthOS is a **friendly consumer health & fitness app**, not an editorial magazine, dark cockpit dashboard, or athletic-brutalist tool. Reference inspiration: Capi Creative health apps, Apple Health, Headspace, Calm — clean, mint-tinted, rounded everything, friendly typography, generous whitespace.
+
+**Vibe in three words:** *Soft. Friendly. Clean.*
+
+### Color palette (in `tailwind.config.js`)
+
+- **Mint scale** (`mint-50` through `mint-700`) — primary brand color, used for backgrounds, gradients, and primary actions. `mint-400`/`mint-500` are the hero shades.
+- **Slate scale** (`slate-50` through `slate-900`) — text and surfaces. `slate-900` for primary text, `slate-600` for secondary, `slate-400` for tertiary, `slate-100`/`slate-50` for faint surfaces, `slate-0` (white) for cards.
+- **Brand pillars** (`brand-green`, `brand-purple`, `brand-amber`, `brand-coral`, `brand-blue`) — used contextually for data accents (macro colors, confidence badges), NOT for primary UI chrome.
+
+### Typography — Poppins only
+
+- `font-sans` (Poppins Regular 400) — body text
+- `font-sans-medium` (Poppins Medium 500) — emphasis
+- `font-sans-semibold` (Poppins SemiBold 600) — buttons, sub-headings
+- `font-sans-bold` (Poppins Bold 700) — headlines, hero text
+
+NO serifs. NO mono. NO display fonts. NO uppercase letter-spaced kickers. NO "EST. 2026" / "CHAPTER ONE" / editorial moves. Just Poppins, mostly bold weights for hierarchy.
+
+Headline sizes: 28-36px, line-height ~1.15, letter-spacing slightly negative (-0.5).
+Body sizes: 14-15px, line-height ~1.5.
+Labels: 12-13px, regular or medium weight, NOT all-caps.
+
+### Layout principles
+
+- **Generous whitespace** — fewer elements, more breathing room. If a screen has more than one section of dense content, redesign it.
+- **Less text** — every screen should be scannable in under 3 seconds. Cut subtitles in half if you can. The user already knows what the app does.
+- **Rounded everything** — `rounded-2xl` (16px) for cards, `rounded-3xl` (24px) for hero cards, `rounded-full` for primary CTAs. Never sharp corners.
+- **Soft shadows** — use `shadowColor` matching the surface tint (e.g. mint shadows for mint cards), `shadowOpacity: 0.15-0.3`, `shadowRadius: 16-24`. Add `elevation: 6-8` for Android.
+- **Atmospheric backgrounds** — every screen has either a soft mint gradient OR a subtle decorative element (blurred circles, organic shapes) for depth. Never flat color.
+- **Centered hierarchy** — headlines and primary content sit center-aligned, breathing room above and below.
+
+### Component patterns
+
+**Primary CTA button** — full-width, `rounded-full`, `bg-mint-500`, `py-5`, white Poppins SemiBold text 16px, soft mint glow shadow. Used for "Get Started", "Continue", "Save", etc.
+
+**Secondary button** — `rounded-full`, `bg-white`, `border` border `border-mint-300`, mint-700 text. Used for "Skip", "Cancel", etc.
+
+**Card** — `bg-white`, `rounded-3xl`, `p-5`, soft drop shadow. Cards float on mint backgrounds — they should feel like they're lifted off the page.
+
+**Input field** — `rounded-2xl`, `bg-slate-50`, `border` `border-slate-100`, `px-4 py-4`, Poppins Medium 15px text, focused state `border-mint-400`. Labels above the input in slate-600 13px medium.
+
+**Avatar / icon container** — circle (rounded-full) with white outer ring + colored inner circle, drop shadow. Sized 80-128px depending on hierarchy.
+
+**Decorative circles** — soft white-on-mint blurred circles in the background corners, 200-280px diameter, 20-30% opacity. Adds depth without distraction.
+
+### Mood board
+
+A user opening any HealthOS screen should feel: *welcomed, calm, in control, like the app is on their side*. NOT: confronted by data, intimidated by athletic energy, lectured by an editorial layout, or dragged through a SaaS onboarding wizard.
+
+When in doubt, **simpler wins**. Cut a subtitle. Remove a section header. Increase the padding. Round the corners more.
+
 ## Ask first before
 
 - Installing new packages

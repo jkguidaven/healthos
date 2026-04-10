@@ -28,7 +28,7 @@ export const Input = forwardRef<TextInput, InputProps>(function Input(
   return (
     <View className="w-full">
       {label ? (
-        <Text className="mb-1 text-[10px] text-zinc-400 dark:text-zinc-600">
+        <Text className="mb-2 font-sans-medium text-[13px] text-slate-600">
           {label}
         </Text>
       ) : null}
@@ -37,15 +37,19 @@ export const Input = forwardRef<TextInput, InputProps>(function Input(
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        placeholderTextColor="#a1a1aa"
+        placeholderTextColor="#8A9494"
         secureTextEntry={secureTextEntry}
         keyboardType={keyboardType}
-        className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-[13px] font-medium text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+        className={`rounded-2xl border bg-slate-50 px-4 py-4 font-sans-medium text-[15px] text-slate-900 ${
+          error ? 'border-brand-coral' : 'border-slate-100'
+        }`}
       />
       {error ? (
-        <Text className="mt-1 text-[10px] text-brand-coral">{error}</Text>
+        <Text className="mt-2 font-sans text-[12px] text-brand-coral">
+          {error}
+        </Text>
       ) : hint ? (
-        <Text className="mt-1 text-[9px] text-zinc-400 dark:text-zinc-600">
+        <Text className="mt-2 font-sans text-[12px] text-slate-400">
           {hint}
         </Text>
       ) : null}

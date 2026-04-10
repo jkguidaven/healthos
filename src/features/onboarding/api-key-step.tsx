@@ -1,38 +1,14 @@
 import React, { useState } from 'react'
 import { Linking, Pressable, Text, View } from 'react-native'
 import { router } from 'expo-router'
-import { ScreenLayout } from '@components/layouts/screen-layout'
+import { LinearGradient } from 'expo-linear-gradient'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { Button } from '@components/ui/button'
-import { Card } from '@components/ui/card'
 import { Input } from '@components/ui/input'
-import {
-  clearApiKey,
-  saveApiKey,
-  validateApiKey,
-} from '@ai/api-key'
+import { clearApiKey, saveApiKey, validateApiKey } from '@ai/api-key'
 
 type ValidationStatus = 'idle' | 'validating' | 'success' | 'error'
 type ErrorCode = 'invalid_key' | 'network_error' | 'rate_limit'
-
-interface FeatureRow {
-  label: string
-  body: string
-}
-
-const FEATURES: readonly FeatureRow[] = [
-  {
-    label: 'FOOD SCANNER',
-    body: 'Snap a photo, get macros',
-  },
-  {
-    label: 'WORKOUT PLANNER',
-    body: 'Claude builds your plan',
-  },
-  {
-    label: 'DAILY COACHING',
-    body: 'Recomp insights from your data',
-  },
-] as const
 
 const ERROR_MESSAGES: Record<ErrorCode, string> = {
   invalid_key: 'Key was rejected by Anthropic',
@@ -42,9 +18,16 @@ const ERROR_MESSAGES: Record<ErrorCode, string> = {
 
 const CONSOLE_URL = 'https://console.anthropic.com'
 
+const MINT_SHADOW = {
+  shadowColor: '#1D9E75',
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.08,
+  shadowRadius: 16,
+  elevation: 3,
+} as const
+
 function ctaLabel(status: ValidationStatus): string {
-  if (status === 'validating') return 'Validating…'
-  if (status === 'success') return 'Validated'
+  if (status === 'error') return 'Try again'
   return 'Validate & save'
 }
 
@@ -90,140 +73,186 @@ export function ApiKeyStep(): React.ReactElement {
     setShowKey((prev) => !prev)
   }
 
-  const isInputDisabled = status === 'validating' || status === 'success'
+  const handleBack = (): void => {
+    router.back()
+  }
+
   const isCtaDisabled =
     status === 'validating' || status === 'success' || key.trim().length === 0
 
   return (
-    <ScreenLayout scroll>
-      <View className="flex-1 pt-4">
-        {/* Progress bar — 3 of 3 filled */}
-        <View
-          className="mb-3.5 flex-row gap-1"
-          accessibilityRole="progressbar"
-          accessibilityLabel="Onboarding progress, step 3 of 3"
-        >
-          <View className="h-3 flex-1 rounded-full bg-brand-green" />
-          <View className="h-3 flex-1 rounded-full bg-brand-green" />
-          <View className="h-3 flex-1 rounded-full bg-brand-green" />
-        </View>
+    <View className="flex-1 bg-mint-100">
+      {/* Soft mint gradient background */}
+      <LinearGradient
+        colors={['#F0FBF7', '#D8F3E8', '#B5E8D5']}
+        locations={[0, 0.5, 1]}
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+      />
 
-        {/* Title */}
-        <Text className="text-[17px] font-medium text-zinc-900 dark:text-zinc-100">
-          Connect Claude AI
-        </Text>
+      {/* Decorative soft circles */}
+      <View
+        className="absolute rounded-full bg-white/30"
+        style={{ width: 280, height: 280, top: -80, right: -100 }}
+      />
+      <View
+        className="absolute rounded-full bg-white/20"
+        style={{ width: 200, height: 200, top: 200, left: -80 }}
+      />
 
-        {/* Subtitle */}
-        <Text className="mb-3 text-[11px] text-zinc-500 dark:text-zinc-400">
-          Powers food scanning, workout plans & coaching
-        </Text>
+      <SafeAreaView edges={['top', 'bottom']} className="flex-1">
+        <View className="flex-1 px-6">
+          {/* === TOP NAV: back + step dots === */}
+          <View className="flex-row items-center justify-between pt-2">
+            <Pressable
+              onPress={handleBack}
+              accessibilityRole="button"
+              accessibilityLabel="Go back"
+              className="h-10 w-10 items-center justify-center rounded-full active:opacity-60"
+              hitSlop={8}
+            >
+              <Text className="font-sans-medium text-[22px] text-slate-700">
+                ←
+              </Text>
+            </Pressable>
 
-        {/* Info card */}
-        <View className="mb-3 rounded-lg bg-purple-50 p-2.5 dark:bg-purple-900/30">
-          <Text className="text-[11px] leading-relaxed text-purple-900 dark:text-purple-100">
-            HealthOS uses the Anthropic Claude API for AI features. Your key is
-            stored securely on this device and never sent anywhere except
-            Anthropic&apos;s servers.
-          </Text>
-        </View>
+            <View
+              className="flex-row items-center gap-2"
+              accessibilityRole="progressbar"
+              accessibilityLabel="Onboarding progress, step 3 of 3"
+            >
+              <View className="h-2 w-2 rounded-full bg-mint-500" />
+              <View className="h-2 w-2 rounded-full bg-mint-500" />
+              <View className="h-2 w-2 rounded-full bg-mint-500" />
+            </View>
 
-        {/* API key input */}
-        <Input
-          label="ANTHROPIC API KEY"
-          value={key}
-          onChangeText={setKey}
-          placeholder="sk-ant-api03-…"
-          secureTextEntry={!showKey}
-        />
+            {/* Spacer to balance the back button */}
+            <View className="h-10 w-10" />
+          </View>
 
-        {/* Show/hide toggle */}
-        <Pressable
-          onPress={handleToggleShow}
-          accessibilityRole="button"
-          disabled={isInputDisabled}
-          className="mt-1 self-end"
-        >
-          <Text className="text-[10px] text-zinc-500 dark:text-zinc-400">
-            {showKey ? 'Hide key' : 'Show key'}
-          </Text>
-        </Pressable>
+          {/* === HEADLINE === */}
+          <View className="mt-8">
+            <Text
+              className="font-sans-bold text-[28px] text-slate-900"
+              style={{ lineHeight: 34, letterSpacing: -0.5 }}
+            >
+              Connect Claude AI
+            </Text>
+            <Text
+              className="mt-3 font-sans text-[15px] text-slate-600"
+              style={{ lineHeight: 22 }}
+            >
+              Powers food scanning, workout plans, and your daily coach.
+            </Text>
+          </View>
 
-        {/* Get key link */}
-        <Pressable
-          onPress={handleOpenConsole}
-          accessibilityRole="link"
-          className="mb-3 mt-1 self-end"
-        >
-          <Text className="text-[11px] text-brand-blue">
-            Get a free key at console.anthropic.com →
-          </Text>
-        </Pressable>
+          {/* === INFO CARD (security reassurance) === */}
+          <View
+            className="mt-8 flex-row items-start gap-3 rounded-3xl bg-white p-5"
+            style={MINT_SHADOW}
+          >
+            <View className="h-8 w-8 items-center justify-center rounded-full bg-mint-100">
+              <Text className="text-[15px]">🔒</Text>
+            </View>
+            <Text
+              className="flex-1 font-sans text-[13px] text-slate-700"
+              style={{ lineHeight: 19 }}
+            >
+              Your key is stored securely on this device using the system
+              keychain. It&apos;s only ever sent to Anthropic&apos;s servers.
+            </Text>
+          </View>
 
-        {/* CTA */}
-        <Button
-          onPress={() => {
-            void handleValidate()
-          }}
-          loading={status === 'validating'}
-          disabled={isCtaDisabled}
-        >
-          {ctaLabel(status)}
-        </Button>
+          {/* === API KEY INPUT CARD === */}
+          <View
+            className="mt-4 rounded-3xl bg-white p-5"
+            style={MINT_SHADOW}
+          >
+            <Input
+              label="Anthropic API key"
+              value={key}
+              onChangeText={setKey}
+              placeholder="sk-ant-api03-…"
+              secureTextEntry={!showKey}
+            />
 
-        {/* Status row */}
-        {status === 'success' ? (
-          <View className="mt-2.5 rounded-lg bg-teal-50 p-2.5 dark:bg-teal-900/30">
-            <View className="flex-row items-center gap-2">
-              <View className="h-2 w-2 rounded-full bg-brand-green" />
-              <Text className="text-[11px] text-brand-green">
+            <View className="mt-3 flex-row items-center justify-between">
+              <Pressable
+                onPress={handleToggleShow}
+                accessibilityRole="button"
+                className="active:opacity-60"
+                hitSlop={8}
+              >
+                <Text className="font-sans-medium text-[13px] text-mint-600">
+                  {showKey ? 'Hide key' : 'Show key'}
+                </Text>
+              </Pressable>
+
+              <Pressable
+                onPress={handleOpenConsole}
+                accessibilityRole="link"
+                className="active:opacity-60"
+                hitSlop={8}
+              >
+                <Text className="font-sans-medium text-[13px] text-mint-600">
+                  Get a free key at console.anthropic.com →
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+
+          {/* === VALIDATION STATUS === */}
+          {status === 'success' ? (
+            <View className="mt-4 flex-row items-center gap-3 rounded-2xl border border-mint-200 bg-mint-50 p-4">
+              <View className="h-5 w-5 items-center justify-center rounded-full bg-mint-500">
+                <Text className="font-sans-bold text-[11px] text-white">
+                  ✓
+                </Text>
+              </View>
+              <Text className="flex-1 font-sans-medium text-[13px] text-mint-700">
                 Key validated — you&apos;re all set
               </Text>
             </View>
-          </View>
-        ) : null}
+          ) : null}
 
-        {status === 'error' && errorCode ? (
-          <View className="mt-2.5 rounded-lg bg-brand-coral/10 p-2.5 dark:bg-brand-coral/20">
-            <View className="flex-row items-center gap-2">
-              <View className="h-2 w-2 rounded-full bg-brand-coral" />
-              <Text className="text-[11px] text-brand-coral">
+          {status === 'error' && errorCode ? (
+            <View className="mt-4 flex-row items-center gap-3 rounded-2xl border border-red-200 bg-red-50 p-4">
+              <View className="h-2.5 w-2.5 rounded-full bg-red-500" />
+              <Text className="flex-1 font-sans-medium text-[13px] text-red-700">
                 {ERROR_MESSAGES[errorCode]}
               </Text>
             </View>
+          ) : null}
+
+          {/* === SPACER === */}
+          <View className="flex-1" />
+
+          {/* === CTA === */}
+          <View className="pb-4">
+            <Button
+              onPress={() => {
+                void handleValidate()
+              }}
+              loading={status === 'validating'}
+              disabled={isCtaDisabled}
+            >
+              {ctaLabel(status)}
+            </Button>
+
+            <Pressable
+              onPress={() => {
+                void handleSkip()
+              }}
+              accessibilityRole="button"
+              className="mt-4 items-center active:opacity-60"
+              hitSlop={8}
+            >
+              <Text className="font-sans-medium text-[13px] text-slate-500">
+                Skip for now
+              </Text>
+            </Pressable>
           </View>
-        ) : null}
-
-        {/* Feature unlock card */}
-        <View className="mt-3">
-          <Card variant="secondary" padding="md">
-            <View className="gap-2">
-              {FEATURES.map((feature) => (
-                <View key={feature.label}>
-                  <Text className="text-[10px] text-zinc-400 dark:text-zinc-500">
-                    {feature.label}
-                  </Text>
-                  <Text className="text-[11px] text-zinc-700 dark:text-zinc-300">
-                    {feature.body}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          </Card>
         </View>
-
-        {/* Skip link */}
-        <Pressable
-          onPress={() => {
-            void handleSkip()
-          }}
-          accessibilityRole="button"
-          className="mt-3 items-center"
-        >
-          <Text className="text-[10px] text-zinc-400 dark:text-zinc-500">
-            Skip for now (some features unavailable)
-          </Text>
-        </Pressable>
-      </View>
-    </ScreenLayout>
+      </SafeAreaView>
+    </View>
   )
 }

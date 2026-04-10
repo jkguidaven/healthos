@@ -45,21 +45,16 @@ describe('ApiKeyStep', () => {
     jest.useRealTimers()
   })
 
-  it('renders title, subtitle, info, CTA, features, and skip link', () => {
+  it('renders title, subtitle, info, CTA, and skip link', () => {
     const { getByText } = renderWithProviders(<ApiKeyStep />)
 
     expect(getByText('Connect Claude AI')).toBeTruthy()
     expect(
-      getByText('Powers food scanning, workout plans & coaching'),
+      getByText('Powers food scanning, workout plans, and your daily coach.'),
     ).toBeTruthy()
-    expect(getByText(/HealthOS uses the Anthropic Claude API/)).toBeTruthy()
+    expect(getByText(/Your key is stored securely/)).toBeTruthy()
     expect(getByText('Validate & save')).toBeTruthy()
-    expect(getByText('FOOD SCANNER')).toBeTruthy()
-    expect(getByText('WORKOUT PLANNER')).toBeTruthy()
-    expect(getByText('DAILY COACHING')).toBeTruthy()
-    expect(
-      getByText('Skip for now (some features unavailable)'),
-    ).toBeTruthy()
+    expect(getByText('Skip for now')).toBeTruthy()
   })
 
   it('CTA is disabled while input is empty', () => {
@@ -174,7 +169,7 @@ describe('ApiKeyStep', () => {
     mockedClear.mockResolvedValueOnce(undefined)
 
     const { getByText } = renderWithProviders(<ApiKeyStep />)
-    fireEvent.press(getByText('Skip for now (some features unavailable)'))
+    fireEvent.press(getByText('Skip for now'))
 
     await waitFor(() => {
       expect(mockedClear).toHaveBeenCalledTimes(1)

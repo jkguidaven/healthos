@@ -5,6 +5,8 @@ module.exports = function (api) {
       ['babel-preset-expo', { jsxImportSource: 'nativewind' }],
     ],
     plugins: [
+      // Inline .sql files as strings (drizzle-orm/expo-sqlite migrations)
+      ['inline-import', { extensions: ['.sql'] }],
       [
         'module-resolver',
         {

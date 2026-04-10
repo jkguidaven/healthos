@@ -17,25 +17,19 @@ describe('WelcomeScreen', () => {
     mockedPush.mockClear()
   })
 
-  it('renders app name, tagline, feature list, CTA, and trust line', () => {
-    const { getByText } = renderWithProviders(<WelcomeScreen />)
+  it('renders headline, subtitle, and Get Started CTA', () => {
+    const { getByText, getByLabelText } = renderWithProviders(<WelcomeScreen />)
 
-    expect(getByText('HealthOS')).toBeTruthy()
-    expect(getByText(/Track\. Train\. Transform\./)).toBeTruthy()
-    expect(getByText('AI food scanner')).toBeTruthy()
-    expect(getByText('AI workout plans')).toBeTruthy()
-    expect(getByText('Body fat tracking')).toBeTruthy()
-    expect(getByText('Recomp coach')).toBeTruthy()
-    expect(getByText('Get started')).toBeTruthy()
-    expect(
-      getByText('All data stays on your device · no account needed'),
-    ).toBeTruthy()
+    expect(getByText(/Welcome to/)).toBeTruthy()
+    expect(getByText(/HealthOS/)).toBeTruthy()
+    expect(getByText('Get Started')).toBeTruthy()
+    expect(getByLabelText('Get started')).toBeTruthy()
   })
 
   it('navigates to the profile screen when CTA is pressed', () => {
-    const { getByText } = renderWithProviders(<WelcomeScreen />)
+    const { getByLabelText } = renderWithProviders(<WelcomeScreen />)
 
-    fireEvent.press(getByText('Get started'))
+    fireEvent.press(getByLabelText('Get started'))
 
     expect(mockedPush).toHaveBeenCalledTimes(1)
     expect(mockedPush).toHaveBeenCalledWith('/(onboarding)/profile')

@@ -9,9 +9,9 @@ interface CardProps {
 }
 
 const paddingMap: Record<NonNullable<CardProps['padding']>, string> = {
-  sm: 'p-2',
-  md: 'p-2.5',
-  lg: 'p-3',
+  sm: 'p-4',
+  md: 'p-5',
+  lg: 'p-6',
 }
 
 export function Card({
@@ -20,14 +20,23 @@ export function Card({
   className = '',
   children,
 }: CardProps) {
-  const background =
-    variant === 'secondary'
-      ? 'bg-zinc-50 dark:bg-zinc-800'
-      : 'bg-white dark:bg-zinc-900'
+  const isPrimary = variant === 'primary'
+  const background = isPrimary ? 'bg-white' : 'bg-slate-50'
 
   return (
     <View
-      className={`rounded-lg ${background} ${paddingMap[padding]} ${className}`}
+      className={`rounded-3xl ${background} ${paddingMap[padding]} ${className}`}
+      style={
+        isPrimary
+          ? {
+              shadowColor: '#1D9E75',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.08,
+              shadowRadius: 16,
+              elevation: 3,
+            }
+          : undefined
+      }
     >
       {children}
     </View>

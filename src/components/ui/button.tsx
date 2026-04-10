@@ -25,7 +25,7 @@ export function Button({
         accessibilityState={{ disabled: isDisabled, busy: loading }}
         disabled={isDisabled}
         onPress={onPress}
-        className={`w-full rounded-lg border border-zinc-200 bg-zinc-50 p-2 dark:border-zinc-700 dark:bg-zinc-800 ${
+        className={`w-full rounded-full border border-mint-300 bg-white py-5 active:opacity-80 ${
           isDisabled ? 'opacity-50' : ''
         }`}
       >
@@ -33,11 +33,11 @@ export function Button({
           {loading ? (
             <ActivityIndicator
               size="small"
-              color="#71717a"
+              color="#15805F"
               accessibilityLabel="Loading"
             />
           ) : (
-            <Text className="text-[11px] text-zinc-500 dark:text-zinc-400">
+            <Text className="font-sans-semibold text-[16px] text-mint-700">
               {children}
             </Text>
           )}
@@ -52,9 +52,16 @@ export function Button({
       accessibilityState={{ disabled: isDisabled, busy: loading }}
       disabled={isDisabled}
       onPress={onPress}
-      className={`w-full rounded-lg bg-brand-green p-2.5 ${
+      className={`w-full rounded-full bg-mint-500 py-5 active:opacity-90 ${
         isDisabled ? 'opacity-50' : ''
       }`}
+      style={{
+        shadowColor: '#2BBF9E',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: isDisabled ? 0 : 0.3,
+        shadowRadius: 16,
+        elevation: isDisabled ? 0 : 6,
+      }}
     >
       <View className="items-center justify-center">
         {loading ? (
@@ -64,7 +71,9 @@ export function Button({
             accessibilityLabel="Loading"
           />
         ) : (
-          <Text className="text-[13px] font-medium text-white">{children}</Text>
+          <Text className="font-sans-semibold text-[16px] text-white">
+            {children}
+          </Text>
         )}
       </View>
     </Pressable>
