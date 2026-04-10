@@ -66,8 +66,7 @@ export function MetricsScreen(): React.ReactElement {
   }
 
   const handleOpenPhotos = (): void => {
-    // Progress photos screen hasn't been built yet.
-    console.log('photos')
+    router.push('/(tabs)/body/photos')
   }
 
   // Show a dedicated empty state when the user has zero body_metric
