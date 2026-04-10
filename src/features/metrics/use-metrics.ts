@@ -11,7 +11,8 @@
  * `@db/queries/metrics`.
  */
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
+import { useFocusEffect } from 'expo-router'
 import { useSQLiteContext } from 'expo-sqlite'
 import { drizzle } from 'drizzle-orm/expo-sqlite'
 import * as schema from '@db/schema'
@@ -86,10 +87,13 @@ export function useMetrics(): UseMetricsResult {
   const [data, setData] = useState<MetricsData>(EMPTY_METRICS)
   const [loading, setLoading] = useState<boolean>(true)
 
-  useEffect(() => {
-    let cancelled = false
+  // Re-run every time the body tab gains focus, so saving a body-fat
+  // calculator entry shows up immediately when the user returns.
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false
 
-    async function load(): Promise<void> {
+      async function load(): Promise<void> {
       if (profileId === null) {
         if (!cancelled) {
           setData(EMPTY_METRICS)
@@ -169,11 +173,12 @@ export function useMetrics(): UseMetricsResult {
       setLoading(false)
     }
 
-    void load()
-    return () => {
-      cancelled = true
-    }
-  }, [db, profileId])
+      void load()
+      return () => {
+        cancelled = true
+      }
+    }, [db, profileId]),
+  )
 
   return { data, loading }
 }

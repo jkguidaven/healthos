@@ -14,12 +14,14 @@
  * can re-run cheaply whenever the tab comes into focus.
  */
 
-import { useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { useSQLiteContext } from 'expo-sqlite'
 import { drizzle } from 'drizzle-orm/expo-sqlite'
+import { useFocusEffect } from 'expo-router'
 import * as schema from '@db/schema'
 import { getProfile } from '@db/queries/profile'
 import { getLatestBodyMetric } from '@db/queries/metrics'
+import { getTodayMacroSummary } from '@db/queries/food-log'
 import { getTodayWaterLog } from '@db/queries/water-log'
 import { useProfileStore } from '@/stores/profile-store'
 
@@ -126,107 +128,111 @@ export function useDashboard(): UseDashboardResult {
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState<boolean>(true)
 
-  useEffect(() => {
-    let cancelled = false
-    const db = drizzle(sqlite, { schema })
+  // useFocusEffect re-runs every time the dashboard tab becomes focused, so
+  // logging food on the food tab and switching back here picks up the new
+  // totals immediately. The cleanup cancels in-flight loads on tab switch.
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false
+      const db = drizzle(sqlite, { schema })
 
-    const load = async (): Promise<void> => {
-      const now = new Date()
-      const greeting = greetingForHour(now.getHours())
-      const todayLabel = formatTodayLabel(now)
+      const load = async (): Promise<void> => {
+        const now = new Date()
+        const greeting = greetingForHour(now.getHours())
+        const todayLabel = formatTodayLabel(now)
 
-      try {
-        const profile = await getProfile(db)
+        try {
+          const profile = await getProfile(db)
 
-        if (profile == null) {
+          if (profile == null) {
+            if (cancelled) return
+            setData({
+              greeting,
+              profileName: 'there',
+              hasProfile: false,
+              goalCalories: 0,
+              goalProteinG: 0,
+              goalCarbsG: 0,
+              goalFatG: 0,
+              todayCalories: 0,
+              todayProteinG: 0,
+              todayCarbsG: 0,
+              todayFatG: 0,
+              todayWeightKg: null,
+              workoutsThisWeek: 0,
+              workoutTarget: WORKOUT_TARGET_PER_WEEK,
+              todayWaterMl: 0,
+              waterTarget: WATER_TARGET_ML,
+              coachMessage: pickCoachMessage(false, now.getDate()),
+              nextWorkoutName: null,
+              todayLabel,
+            })
+            setLoading(false)
+            return
+          }
+
+          // Prime the Zustand store on first read this session.
+          if (profileInStore == null) {
+            setProfileInStore({
+              id: profile.id,
+              age: profile.age,
+              sex: profile.sex,
+              heightCm: profile.heightCm,
+              weightKg: profile.weightKg,
+              units: profile.units,
+              goal: profile.goal,
+              activityLevel: 0,
+              goalCalories: profile.goalCalories,
+              goalProteinG: profile.goalProteinG,
+              goalCarbsG: profile.goalCarbsG,
+              goalFatG: profile.goalFatG,
+              experienceLevel: profile.experienceLevel,
+            })
+          }
+
+          const [latestMetric, waterRow, macroSummary] = await Promise.all([
+            getLatestBodyMetric(db, profile.id),
+            getTodayWaterLog(db, profile.id),
+            getTodayMacroSummary(db, profile.id),
+          ])
+
           if (cancelled) return
+
           setData({
             greeting,
             profileName: 'there',
-            hasProfile: false,
-            goalCalories: 0,
-            goalProteinG: 0,
-            goalCarbsG: 0,
-            goalFatG: 0,
-            todayCalories: 0,
-            todayProteinG: 0,
-            todayCarbsG: 0,
-            todayFatG: 0,
-            todayWeightKg: null,
-            workoutsThisWeek: 0,
-            workoutTarget: WORKOUT_TARGET_PER_WEEK,
-            todayWaterMl: 0,
-            waterTarget: WATER_TARGET_ML,
-            coachMessage: pickCoachMessage(false, now.getDate()),
-            nextWorkoutName: null,
-            todayLabel,
-          })
-          setLoading(false)
-          return
-        }
-
-        // Prime the Zustand store if this is the first time the app has
-        // seen the profile row in this JS session (e.g. cold start directly
-        // into the tabs route without passing through onboarding).
-        if (profileInStore == null) {
-          setProfileInStore({
-            id: profile.id,
-            age: profile.age,
-            sex: profile.sex,
-            heightCm: profile.heightCm,
-            weightKg: profile.weightKg,
-            units: profile.units,
-            goal: profile.goal,
-            activityLevel: 0,
+            hasProfile: true,
             goalCalories: profile.goalCalories,
             goalProteinG: profile.goalProteinG,
             goalCarbsG: profile.goalCarbsG,
             goalFatG: profile.goalFatG,
-            experienceLevel: profile.experienceLevel,
+            todayCalories: macroSummary.calories,
+            todayProteinG: macroSummary.proteinG,
+            todayCarbsG: macroSummary.carbsG,
+            todayFatG: macroSummary.fatG,
+            todayWeightKg: latestMetric?.weightKg ?? null,
+            workoutsThisWeek: 0,
+            workoutTarget: WORKOUT_TARGET_PER_WEEK,
+            todayWaterMl: waterRow?.amountMl ?? 0,
+            waterTarget: WATER_TARGET_ML,
+            coachMessage: pickCoachMessage(true, now.getDate()),
+            nextWorkoutName: null,
+            todayLabel,
           })
+        } finally {
+          if (!cancelled) setLoading(false)
         }
-
-        const [latestMetric, waterRow] = await Promise.all([
-          getLatestBodyMetric(db, profile.id),
-          getTodayWaterLog(db, profile.id),
-        ])
-
-        if (cancelled) return
-
-        setData({
-          greeting,
-          profileName: 'there',
-          hasProfile: true,
-          goalCalories: profile.goalCalories,
-          goalProteinG: profile.goalProteinG,
-          goalCarbsG: profile.goalCarbsG,
-          goalFatG: profile.goalFatG,
-          todayCalories: 0,
-          todayProteinG: 0,
-          todayCarbsG: 0,
-          todayFatG: 0,
-          todayWeightKg: latestMetric?.weightKg ?? null,
-          workoutsThisWeek: 0,
-          workoutTarget: WORKOUT_TARGET_PER_WEEK,
-          todayWaterMl: waterRow?.amountMl ?? 0,
-          waterTarget: WATER_TARGET_ML,
-          coachMessage: pickCoachMessage(true, now.getDate()),
-          nextWorkoutName: null,
-          todayLabel,
-        })
-      } finally {
-        if (!cancelled) setLoading(false)
       }
-    }
 
-    void load()
-    return () => {
-      cancelled = true
-    }
-    // We intentionally only want to re-run when the SQLite handle changes.
-    // Re-running on every store mutation would cause a render loop.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sqlite])
+      void load()
+      return () => {
+        cancelled = true
+      }
+      // We intentionally don't depend on profileInStore — it would cause a
+      // render loop after the prime.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [sqlite]),
+  )
 
   return { data, loading }
 }

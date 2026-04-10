@@ -15,7 +15,8 @@
  * so the screen can render its zero-state without crashing.
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
+import { useFocusEffect } from 'expo-router'
 import { useSQLiteContext } from 'expo-sqlite'
 import { drizzle } from 'drizzle-orm/expo-sqlite'
 
@@ -146,9 +147,14 @@ export function useFoodLog(): UseFoodLogResult {
     }
   }, [db, profileId, goalCalories, goalProteinG])
 
-  useEffect(() => {
-    void fetchFoodLog()
-  }, [fetchFoodLog])
+  // Re-fetch every time the food tab gains focus, so logging a meal on
+  // the camera/confirm/manual screens shows up immediately when the user
+  // returns to the list.
+  useFocusEffect(
+    useCallback(() => {
+      void fetchFoodLog()
+    }, [fetchFoodLog]),
+  )
 
   const refresh = useCallback(async (): Promise<void> => {
     await fetchFoodLog()

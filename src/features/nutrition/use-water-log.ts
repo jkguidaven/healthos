@@ -18,7 +18,8 @@
  * dashboard can render its zero-state without crashing.
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
+import { useFocusEffect } from 'expo-router'
 import { useSQLiteContext } from 'expo-sqlite'
 import { drizzle } from 'drizzle-orm/expo-sqlite'
 
@@ -109,9 +110,14 @@ export function useWaterLog(): UseWaterLogResult {
     }
   }, [db, profileId])
 
-  useEffect(() => {
-    void fetchWaterLog()
-  }, [fetchWaterLog])
+  // Re-fetch every time the dashboard or water tracker tab gains focus,
+  // so a quick-add on the tracker is reflected immediately when the user
+  // returns to the food tab or dashboard.
+  useFocusEffect(
+    useCallback(() => {
+      void fetchWaterLog()
+    }, [fetchWaterLog]),
+  )
 
   const refresh = useCallback(async (): Promise<void> => {
     await fetchWaterLog()
