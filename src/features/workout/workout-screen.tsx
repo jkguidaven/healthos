@@ -265,6 +265,13 @@ function PlanView({ data, onGenerate }: PlanViewProps): React.ReactElement {
   // locally so the type flows through without a non-null assertion.
   if (plan == null) return <View />
 
+  const handleBeginDay = (dayId: number): void => {
+    router.push({
+      pathname: '/(tabs)/workout/session',
+      params: { planId: String(plan.id), dayId: String(dayId) },
+    })
+  }
+
   return (
     <View className="mt-6">
       <PlanSummaryCard plan={plan} />
@@ -286,7 +293,7 @@ function PlanView({ data, onGenerate }: PlanViewProps): React.ReactElement {
             key={day.day.id}
             style={idx > 0 ? { marginTop: 12 } : undefined}
           >
-            <DayCard day={day} />
+            <DayCard day={day} onBegin={handleBeginDay} />
           </View>
         ))}
       </View>
@@ -406,17 +413,16 @@ const DAY_CARD_EXERCISE_PREVIEW = 4
 
 interface DayCardProps {
   day: PlanDayWithExercises
+  onBegin: (dayId: number) => void
 }
 
-function DayCard({ day }: DayCardProps): React.ReactElement {
+function DayCard({ day, onBegin }: DayCardProps): React.ReactElement {
   const muscleLabel = formatMuscleGroups(day.muscleGroups)
   const visibleExercises = day.exercises.slice(0, DAY_CARD_EXERCISE_PREVIEW)
   const hiddenCount = day.exercises.length - visibleExercises.length
 
   const handleBegin = (): void => {
-    // Session logger lands in #48 — stub for now so the button feels alive.
-    // eslint-disable-next-line no-console
-    console.log('begin', day.day.id)
+    onBegin(day.day.id)
   }
 
   return (

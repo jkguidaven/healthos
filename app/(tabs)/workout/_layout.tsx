@@ -11,6 +11,14 @@ export default function WorkoutLayout() {
           animation: 'slide_from_bottom',
         }}
       />
+      <Stack.Screen
+        name="session"
+        options={{
+          presentation: 'fullScreenModal',
+          animation: 'slide_from_bottom',
+          gestureEnabled: false,
+        }}
+      />
     </Stack>
   )
 }
