@@ -2,7 +2,7 @@
 
 > Personal AI-powered health companion. Open-source, local-first, cross-platform (iOS + Android).
 > Primary goal: **body recomposition** (simultaneous fat loss + muscle gain).
-> API key is entered in-app at first launch — no `.env` files, no terminal setup required.
+> Gemini API key is entered in-app at first launch — free tier, no `.env` files, no terminal setup required.
 
 ---
 
@@ -20,14 +20,14 @@
 10. [Testing strategy](#10-testing-strategy)
 11. [Build phases (roadmap)](#11-build-phases-roadmap)
 12. [AI agent operating guide (CLAUDE.md / AGENTS.md)](#12-ai-agent-operating-guide)
-13. [Recommended Claude skills](#13-recommended-claude-skills)
+13. [Recommended Claude Code skills](#13-recommended-claude-code-skills)
 14. [Open-source conventions](#14-open-source-conventions)
 
 ---
 
 ## 1. What this app does
 
-HealthOS is a personal mobile app that tracks nutrition, workouts, and body metrics — all powered by Claude AI. It is built for personal use first, with the codebase published open-source so others can self-host it with their own API key.
+HealthOS is a personal mobile app that tracks nutrition, workouts, and body metrics — all powered by Google's Gemini AI. It is built for personal use first, with the codebase published open-source so others can self-host it with their own free API key.
 
 ### Four core pillars
 
@@ -61,20 +61,22 @@ All data lives in SQLite on the device. There is no server, no auth, no cloud sy
 - Makes the open-source project genuinely self-contained — contributors fork, add their API key, run
 - SQLite with Drizzle ORM gives type-safe queries and versioned migrations with zero ceremony
 
-### Claude API for AI features, not a fine-tuned model
+### Gemini API for AI features, not a fine-tuned model
 
-All AI features (food vision, workout plan generation, coaching) call `claude-sonnet-4-6` via the Anthropic API. Rationale:
+All AI features (food vision, workout plan generation, coaching) call `gemini-2.5-flash` via Google's Generative Language API. Rationale:
 
-- Claude's vision capability is production-grade for food identification without fine-tuning
-- Plan generation and coaching benefit from Claude's reasoning, not pattern matching
-- Keeps the app model-agnostic if Anthropic releases better models — just update the model string
+- Gemini's vision capability is production-grade for food identification without fine-tuning
+- Plan generation and coaching benefit from Gemini's reasoning, not pattern matching
+- The free tier (1500 requests/day, 15 RPM) covers personal use comfortably with no credit card required
+- Built-in JSON mode (`responseMimeType: 'application/json'`) gives reliable structured output
+- Keeps the app model-agnostic if Google releases better models — just update the model string
 - The API key is entered by the user inside the app on first launch — no environment variables, no terminal
 
 ### API key stored in device secure enclave, not environment variables
 
-The Anthropic API key is collected during onboarding and stored in `expo-secure-store`, which uses iOS Keychain and Android Keystore. Rationale:
+The Gemini API key is collected during onboarding and stored in `expo-secure-store`, which uses iOS Keychain and Android Keystore. Rationale:
 
-- Makes the app genuinely shareable: download, open, paste key, go — no developer tooling required
+- Makes the app genuinely shareable: download, open, paste a free key, go — no developer tooling required
 - Keys stored in the secure enclave are encrypted at rest and inaccessible to other apps
 - Eliminates the entire `.env` / `EAS Secrets` complexity for personal open-source use
 - Contributors and users are completely decoupled — each person uses their own key, their own data
@@ -107,7 +109,7 @@ Lightweight global state for UI-layer state (current day's log, active workout s
 
 ### React Query for AI call lifecycle
 
-All Claude API calls go through `@tanstack/react-query`. Rationale:
+All Gemini API calls go through `@tanstack/react-query`. Rationale:
 
 - Loading, error, and success states handled declaratively
 - Automatic retry on transient network errors
@@ -126,7 +128,7 @@ Styling:      NativeWind (Tailwind CSS for React Native)
 State:        Zustand (UI state) + Drizzle live queries (persistent data)
 Database:     expo-sqlite + Drizzle ORM + drizzle-kit (migrations)
 Key storage:  expo-secure-store (iOS Keychain / Android Keystore)
-AI:           Anthropic Claude API (claude-sonnet-4-6) — vision + text
+AI:           Google Gemini API (gemini-2.5-flash) — vision + text, free tier
 Nutrition DB: Open Food Facts API (barcode fallback, free)
 Exercise DB:  WGER REST API (exercise library, free open-source)
 Charts:       Victory Native XL (health data visualisation)
@@ -199,13 +201,13 @@ healthos/
 │   │   │   ├── food-log-list.tsx
 │   │   │   ├── macro-rings.tsx
 │   │   │   ├── use-food-log.ts
-│   │   │   ├── use-food-scanner.ts   # Claude vision call
+│   │   │   ├── use-food-scanner.ts   # Gemini vision call
 │   │   │   └── types.ts
 │   │   ├── workout/
 │   │   │   ├── workout-screen.tsx
 │   │   │   ├── session-logger.tsx
 │   │   │   ├── plan-view.tsx
-│   │   │   ├── use-workout-plan.ts   # Claude plan gen call
+│   │   │   ├── use-workout-plan.ts   # Gemini plan gen call
 │   │   │   ├── use-session.ts
 │   │   │   └── types.ts
 │   │   ├── metrics/
@@ -219,7 +221,7 @@ healthos/
 │   │   │   ├── coach-screen.tsx
 │   │   │   ├── daily-checkin.tsx
 │   │   │   ├── weekly-digest.tsx
-│   │   │   ├── use-coach.ts          # Claude coaching call
+│   │   │   ├── use-coach.ts          # Gemini coaching call
 │   │   │   └── types.ts
 │   │   └── dashboard/
 │   │       ├── dashboard-screen.tsx
@@ -239,7 +241,7 @@ healthos/
 │   │
 │   ├── lib/
 │   │   ├── ai/
-│   │   │   ├── claude-client.ts      # Anthropic API wrapper — reads key from SecureStore
+│   │   │   ├── ai-client.ts          # Gemini API wrapper — reads key from SecureStore
 │   │   │   ├── api-key.ts            # SecureStore read/write/validate helpers
 │   │   │   ├── prompts/
 │   │   │   │   ├── food-scan.ts
@@ -317,7 +319,7 @@ healthos/
               ┌────────────────┼────────────────┐
               │                │                │
     ┌─────────▼──────┐  ┌──────▼──────┐  ┌─────▼──────────┐
-    │  Claude API    │  │  Open Food  │  │   WGER API     │
+    │  Gemini API    │  │  Open Food  │  │   WGER API     │
     │ (vision+text)  │  │  Facts API  │  │ (exercise DB)  │
     └────────────────┘  └─────────────┘  └────────────────┘
 
@@ -335,8 +337,8 @@ User taps camera
   → expo-camera captures frame
   → base64 encode image
   → React Query mutation fires
-  → claude-client.ts: POST /v1/messages (image + food-scan system prompt)
-  → Claude returns structured JSON: { name, calories, protein, carbs, fat, confidence }
+  → ai-client.ts: POST /v1beta/models/gemini-2.5-flash:generateContent (image + food-scan system instruction)
+  → Gemini returns structured JSON: { name, calories, protein, carbs, fat, confidence }
   → Zod validates response schema
   → Drizzle inserts FoodLog row
   → useLiveQuery updates the macro rings on screen
@@ -348,8 +350,8 @@ User taps camera
 ```
 User fills plan form (goal, equipment, days/week, experience)
   → React Query mutation fires
-  → claude-client.ts: POST /v1/messages (profile + workout-plan system prompt)
-  → Claude returns structured JSON: { weeks, days: [{ name, exercises: [...] }] }
+  → ai-client.ts: POST /v1beta/models/gemini-2.5-flash:generateContent (profile + workout-plan system instruction)
+  → Gemini returns structured JSON: { weeks, days: [{ name, exercises: [...] }] }
   → Zod validates schema
   → Drizzle inserts WorkoutPlan + WorkoutDay + Exercise rows
   → Expo Router navigates to plan view
@@ -382,7 +384,7 @@ coach_entry       — daily AI coaching responses (cached, not re-generated)
 - All `id` fields are `INTEGER PRIMARY KEY AUTOINCREMENT` — keeps foreign keys simple
 - Dates stored as `TEXT` in ISO 8601 (`YYYY-MM-DD`) — no timezone complexity for a personal local app
 - Weights stored as `REAL` in kg internally; UI layer handles display unit conversion
-- `coach_entry` caches the daily AI response to avoid re-calling Claude on re-open
+- `coach_entry` caches the daily AI response to avoid re-calling Gemini on re-open
 - `progress_photo` stores a file URI from `expo-file-system` — the photo itself never touches a server
 
 ---
@@ -391,13 +393,13 @@ coach_entry       — daily AI coaching responses (cached, not re-generated)
 
 ### API client pattern
 
-All Claude calls go through `src/lib/ai/claude-client.ts`. This is the only file that reads the API key — via `expo-secure-store`, not `process.env`. No feature code calls `fetch` directly and no feature code touches the key.
+All Gemini calls go through `src/lib/ai/ai-client.ts`. This is the only file that reads the API key — via `expo-secure-store`, not `process.env`. No feature code calls `fetch` directly and no feature code touches the key.
 
 ```typescript
-// src/lib/ai/claude-client.ts
-export async function callClaude<T>(params: {
+// src/lib/ai/ai-client.ts
+export async function callAI<T>(params: {
   system: string
-  userMessage: string | ContentBlock[]
+  userMessage: string | GeminiPart[]
   schema: z.ZodType<T>
   maxTokens?: number
 }): Promise<T>
@@ -406,9 +408,9 @@ export async function callClaude<T>(params: {
 Every call:
 1. Reads the API key from SecureStore via `getApiKey()` in `src/lib/ai/api-key.ts`
 2. Throws `APIKeyMissingError` if no key is stored — the UI handles this as a prompt to configure the key
-3. Constructs the request with the system prompt from `src/lib/ai/prompts/`
-4. Posts to `https://api.anthropic.com/v1/messages` with `claude-sonnet-4-6`
-5. Parses and Zod-validates the response
+3. Constructs the request with the system instruction from `src/lib/ai/prompts/`
+4. Posts to `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=<API_KEY>` with `generationConfig: { responseMimeType: 'application/json' }` for structured output
+5. Parses `candidates[0].content.parts[0].text` and Zod-validates the response
 6. Throws a typed `AIError` on failure so React Query can surface it correctly
 
 ### Prompt files
@@ -419,7 +421,7 @@ Each AI feature has its own prompt file. Prompts are functions that take context
 
 ```typescript
 export function buildFoodScanPrompt(userContext?: string): string
-// System: instructs Claude to identify food, estimate macros, return JSON
+// System instruction: tells Gemini to identify food, estimate macros, return JSON
 // Returns strict JSON schema: { name, calories, protein_g, carbs_g, fat_g, confidence, notes }
 // Confidence: "high" | "medium" | "low" — shown in UI so user can override
 ```
@@ -428,7 +430,7 @@ export function buildFoodScanPrompt(userContext?: string): string
 
 ```typescript
 export function buildWorkoutPlanPrompt(profile: Profile, planRequest: PlanRequest): string
-// System: sports science principles, recomp-aware programming
+// System instruction: sports science principles, recomp-aware programming
 // Includes profile context: age, sex, weight, goal, experience, equipment, days/week
 // Returns JSON: { planName, weeks, daysPerWeek, days: WorkoutDay[] }
 ```
@@ -438,13 +440,13 @@ export function buildWorkoutPlanPrompt(profile: Profile, planRequest: PlanReques
 ```typescript
 export function buildDailyCoachPrompt(context: CoachContext): string
 // CoachContext includes: profile, todayNutrition, lastWorkout, last7DaysMetrics, streak
-// System: recomp-aware coach — understands that scale stall ≠ failure
+// System instruction: recomp-aware coach — understands that scale stall ≠ failure
 // Returns: { message, insights: string[], actionItems: string[], mood: 'great'|'good'|'check-in' }
 ```
 
 ### Recomp-specific AI instructions
 
-The coach system prompt includes these explicit instructions:
+The coach system instruction includes these explicit rules:
 
 ```
 You are a body recomposition coach. The user is simultaneously building muscle and losing fat.
@@ -459,7 +461,7 @@ Key principles you always apply:
 
 ### Structured output validation
 
-Every Claude response is validated with Zod before touching the database. If Claude returns malformed JSON, the error is caught, logged, and surfaced to the user with a retry option — the app never silently corrupts the database.
+Every Gemini response is validated with Zod before touching the database. Gemini's `responseMimeType: 'application/json'` enforces JSON output, but the app still defensively parses and validates — if a response is malformed, the error is caught, logged, and surfaced to the user with a retry option, so the database is never silently corrupted.
 
 ```typescript
 const FoodScanResult = z.object({
@@ -481,12 +483,12 @@ Full flow documented in `docs/api-key-flow.md`. This section is the authoritativ
 
 ### Storage
 
-The Anthropic API key is stored exclusively in `expo-secure-store` under the key `'anthropic_api_key'`. It is never written to SQLite, AsyncStorage, or any file on disk. It never appears in logs, state dumps, or crash reports.
+The Gemini API key is stored exclusively in `expo-secure-store` under the key `'gemini_api_key'`. It is never written to SQLite, AsyncStorage, or any file on disk. It never appears in logs, state dumps, or crash reports.
 
 ```typescript
 // src/lib/ai/api-key.ts
 
-const SECURE_STORE_KEY = 'anthropic_api_key' as const
+const SECURE_STORE_KEY = 'gemini_api_key' as const
 
 export async function getApiKey(): Promise<string | null>
 export async function saveApiKey(key: string): Promise<void>
@@ -495,7 +497,7 @@ export async function validateApiKey(key: string): Promise<ValidationResult>
 // ValidationResult: { valid: boolean; error?: 'invalid_key' | 'network_error' | 'rate_limit' }
 ```
 
-`validateApiKey` makes a minimal call to `/v1/messages` (`max_tokens: 1`, single-word prompt) to confirm the key is accepted before saving. It does not store the key if validation fails.
+`validateApiKey` makes a lightweight `GET https://generativelanguage.googleapis.com/v1beta/models?key=<key>` call to confirm the key is accepted before saving. It does not store the key if validation fails.
 
 ### Onboarding flow
 
@@ -507,8 +509,8 @@ Step 1 — Profile form
   → saves to SQLite profile table on submit
 
 Step 2 — API key
-  → explains what the key is (2 sentences)
-  → links to https://console.anthropic.com
+  → explains what the key is (2 sentences) and that the free tier needs no credit card
+  → links to https://aistudio.google.com/apikey
   → masked TextInput (secureTextEntry)
   → "Validate & Save" button
   → calls validateApiKey() — shows loading spinner
@@ -520,7 +522,7 @@ The onboarding screen is shown when `profile` table is empty OR `hasApiKey` is f
 
 ### Runtime key check
 
-`claude-client.ts` calls `getApiKey()` at the start of every AI request. If it returns `null`:
+`ai-client.ts` calls `getApiKey()` at the start of every AI request. If it returns `null`:
 
 1. Throws `APIKeyMissingError`
 2. React Query surfaces this as an error state
@@ -533,10 +535,10 @@ This means AI features degrade gracefully if the key is somehow lost (e.g. user 
 
 `src/features/settings/api-key-settings.tsx` provides:
 
-- Masked display of the stored key (`sk-ant-...••••••••` showing first 10 chars only)
+- Masked display of the stored key (`AIza...••••••••` showing first 6 chars only)
 - "Update key" — opens the same input + validation flow as onboarding
 - "Remove key" — calls `clearApiKey()`, sets `hasApiKey = false`, navigates back to onboarding step 2
-- A direct link to `https://console.anthropic.com` to get or rotate keys
+- A direct link to `https://aistudio.google.com/apikey` to get or rotate keys
 
 ### Zustand profile store
 
@@ -564,7 +566,7 @@ interface UIStore {
 
 ### Principles applied throughout this codebase
 
-**Single responsibility** — each file does one thing. `body-fat-calculator.ts` only calculates body fat. It does not touch the database, call APIs, or know about React. This makes it trivially testable and easy to swap formulas.
+**Single responsibility** — each file does one thing. `body-fat-calculator.ts` only calculates body fat. It does not touch the database, call AI providers, or know about React. This makes it trivially testable and easy to swap formulas.
 
 **Separation of concerns** — UI components do not query the database directly. Feature hooks (`use-food-log.ts`) own data fetching and mutations. Components receive data as props or call hooks — never Drizzle directly.
 
@@ -643,7 +645,7 @@ import { renderWithProviders } from '@/test-utils'
 // test-utils.tsx wraps with QueryClientProvider + SQLiteProvider mock + NavigationContainer
 ```
 
-Mock AI calls with MSW (Mock Service Worker) — never hit the real Claude API in tests.
+Mock AI calls with MSW (Mock Service Worker) — never hit the real Gemini API in tests.
 
 ### Jest configuration
 
@@ -698,10 +700,10 @@ Deliverable: a working app with no AI, fully usable for tracking basics.
 ### Phase 2 — AI food scanner + nutrition log (Week 2–3)
 
 - `expo-camera` integration, permission handling
-- `use-food-scanner.ts`: capture → base64 → Claude vision → Zod parse → Drizzle insert
+- `use-food-scanner.ts`: capture → base64 → Gemini vision → Zod parse → Drizzle insert
 - Macro rings UI (daily progress vs targets) using Victory Native
 - Manual food entry form (fallback for when photo scan is uncertain)
-- Barcode scan → Open Food Facts API lookup (no Claude call needed for packaged food)
+- Barcode scan → Open Food Facts API lookup (no AI call needed for packaged food)
 - Daily food log list with edit/delete
 - Water intake logger
 
@@ -710,7 +712,7 @@ Deliverable: the headline feature working end-to-end.
 ### Phase 3 — workout planner + session logger (Week 4–5)
 
 - Plan request form: goal, equipment available, days/week, experience level
-- `use-workout-plan.ts`: form data → Claude plan gen prompt → Zod parse → Drizzle insert
+- `use-workout-plan.ts`: form data → Gemini plan gen prompt → Zod parse → Drizzle insert
 - Plan view: weekly schedule, exercise cards with sets/reps/rest
 - WGER API integration: exercise lookup by name, animated GIF thumbnails
 - Session logger: active workout screen, log each set (weight × reps), rest timer
@@ -720,7 +722,7 @@ Deliverable: a complete workout planning + tracking loop.
 
 ### Phase 4 — AI coach + weekly digest (Week 6)
 
-- Daily check-in: pulls today's nutrition, last workout, last 7d metrics → Claude coaching call → cached in `coach_entry`
+- Daily check-in: pulls today's nutrition, last workout, last 7d metrics → Gemini coaching call → cached in `coach_entry`
 - Coach screen: displays today's message + insights + action items
 - Weekly digest: triggered on Sunday, summarises the full week, suggests adjustments
 - Habit streaks: consecutive days of food logging, workout completion, water goal
@@ -743,12 +745,12 @@ Deliverable: the full four-pillar app.
 ```markdown
 # HealthOS — agent guide
 
-Personal health app. React Native + Expo + TypeScript. Local-first SQLite. Claude API for AI features.
+Personal health app. React Native + Expo + TypeScript. Local-first SQLite. Gemini API for AI features.
 
 ## Project map
 - `app/` — Expo Router routes (thin re-exports only, no logic here)
 - `src/features/` — all product feature code
-- `src/lib/ai/` — Claude API client and prompt files
+- `src/lib/ai/` — Gemini API client and prompt files
 - `src/lib/db/` — Drizzle schema, migrations, query files
 - `src/lib/formulas/` — pure TypeScript health math (body fat, TDEE, macros)
 - `src/components/` — shared UI components
@@ -775,7 +777,7 @@ pnpm db:migrate         # apply migrations
 - Prefer `interface` over `type` for objects
 - Named exports only — no default exports except screen components
 - No raw SQL — use Drizzle query builder
-- No direct `fetch` to Claude API — always use `src/lib/ai/claude-client.ts`
+- No direct `fetch` to the Gemini API — always use `src/lib/ai/ai-client.ts`
 - No logic in `app/` route files — screens live in `src/features/`
 - Formulas in `src/lib/formulas/` are pure functions — no side effects, fully unit-tested
 
@@ -792,14 +794,15 @@ pnpm db:migrate         # apply migrations
 - Run `pnpm test` before any commit; must pass
 
 ## AI calls
-- All Claude calls go through `callClaude()` in `src/lib/ai/claude-client.ts`
-- `claude-client.ts` reads the API key from SecureStore via `getApiKey()` in `src/lib/ai/api-key.ts`
-- Every response is Zod-validated — never trust raw Claude output
+- All Gemini calls go through `callAI()` in `src/lib/ai/ai-client.ts`
+- `ai-client.ts` reads the API key from SecureStore via `getApiKey()` in `src/lib/ai/api-key.ts`
+- Every response is Zod-validated — never trust raw model output
 - Prompt strings live in `src/lib/ai/prompts/` — never inline prompt strings in feature code
-- Model: `claude-sonnet-4-6`
+- Model: `gemini-2.5-flash`
+- Use `generationConfig: { responseMimeType: 'application/json' }` for structured output
 
 ## API key rules
-- The key is stored ONLY in expo-secure-store under `'anthropic_api_key'`
+- The key is stored ONLY in expo-secure-store under `'gemini_api_key'`
 - Never log the key, pass it as a prop, or put it in Zustand state
 - `hasApiKey: boolean` in ui-store is the only key-related value in global state
 - On `APIKeyMissingError` → deep-link to settings, never crash
@@ -809,13 +812,13 @@ pnpm db:migrate         # apply migrations
 ## Safety
 - No `.env` file — the API key is entered in-app and stored in SecureStore
 - No secrets in the repo — nothing to accidentally commit
-- All user data stays on-device — external calls: Claude API + Open Food Facts + WGER only
+- All user data stays on-device — external calls: Gemini API + Open Food Facts + WGER only
 
 ## Ask first before
 - Installing new packages
 - Changing the Drizzle schema (always regenerate migrations after)
 - Modifying `app/_layout.tsx` (root layout, affects the whole app)
-- Changing the Claude prompt files (test with real API before committing)
+- Changing the Gemini prompt files (test with real API before committing)
 - Changing anything in `src/lib/ai/api-key.ts` (security-sensitive)
 ```
 
@@ -827,13 +830,14 @@ Place a scoped `AGENTS.md` in these directories for additional context:
 
 **`src/lib/ai/AGENTS.md`**
 ```markdown
-This directory owns all Claude API integration.
+This directory owns all Gemini API integration.
 - `api-key.ts` is the ONLY file that reads from or writes to SecureStore for the API key
-- `claude-client.ts` calls `getApiKey()` from api-key.ts — it never reads process.env or any config
+- `ai-client.ts` calls `getApiKey()` from api-key.ts — it never reads process.env or any config
 - Never log, prop-drill, or store the raw key string anywhere outside api-key.ts
 - All responses must be Zod-validated before use
 - Prompt files are functions, not string constants — they take context params
-- Model string: claude-sonnet-4-6 — update here if model changes
+- Model string: gemini-2.5-flash — update here if model changes
+- Use `generationConfig: { responseMimeType: 'application/json' }` for structured output
 - Never add retry logic here — React Query handles retries at the call site
 - APIKeyMissingError and APIKeyInvalidError are distinct — handle both differently in the UI layer
 - See docs/api-key-flow.md for the full key lifecycle
@@ -863,7 +867,9 @@ Pure TypeScript health math. No imports from React, Drizzle, or AI.
 
 ---
 
-## 13. Recommended Claude skills
+## 13. Recommended Claude Code skills
+
+> **Note:** "Claude Code" here refers to Anthropic's IDE/agent harness that runs the development workflow — it is unrelated to the runtime AI provider (Google Gemini) used by the HealthOS app itself. Claude Code stays as the build-time agent regardless of which model the app calls.
 
 ### Skills to create for this project
 
@@ -899,22 +905,28 @@ Key rules to encode:
 
 ---
 
-#### `claude-api-integration.md`
+#### `gemini-api-integration.md`
 
-**Trigger when:** modifying `src/lib/ai/` or any code that calls Claude.
+**Trigger when:** modifying `src/lib/ai/` or any code that calls the Gemini API.
 
 Key rules to encode:
-- All calls go through `callClaude()` — never `fetch` directly
+- All calls go through `callAI()` in `src/lib/ai/ai-client.ts` — never `fetch` directly
+- Endpoint: `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=<API_KEY>`
+- System instruction goes in `systemInstruction: { parts: [{ text: ... }] }`, NOT a top-level `system` field
+- User message goes in `contents: [{ role: 'user', parts: [...] }]`
+- For vision: include `{ inlineData: { mimeType, data } }` parts alongside text parts
+- For structured output: always set `generationConfig: { responseMimeType: 'application/json' }`
+- Response text lives at `candidates[0].content.parts[0].text` — parse and validate with Zod
 - Prompt functions accept typed parameters and return a string — no template literals in feature code
 - Always add a Zod schema for the expected response before writing the prompt
-- Use `max_tokens: 1024` for food scans, `4096` for workout plan generation, `2048` for coaching
+- Use `maxOutputTokens: 1024` for food scans, `4096` for workout plan generation, `2048` for coaching
 - Food scan images: resize to max 1024px longest side before base64 encoding (reduces tokens)
 - Error handling: `AIError` with `code: 'parse_error' | 'api_error' | 'rate_limit' | 'key_missing' | 'key_invalid'` — each surfaced differently in UI:
   - `key_missing` → deep-link to Settings > API Key screen
   - `key_invalid` → show inline error with link to settings ("Your API key was rejected — update it in Settings")
-  - `rate_limit` → show retry banner with cooldown timer
+  - `rate_limit` → show retry banner with cooldown timer (Gemini free tier = 15 RPM)
   - `api_error` → show generic retry option
-  - `parse_error` → show "Claude returned an unexpected response, try again"
+  - `parse_error` → show "The AI returned an unexpected response, try again"
 
 ---
 
@@ -973,8 +985,8 @@ The README should reflect the zero-config setup experience:
 1. Clone the repo
 2. pnpm install
 3. npx expo start (or use EAS Build for a device build)
-4. Open the app → enter your Anthropic API key when prompted
-   → Get a key at https://console.anthropic.com
+4. Open the app → enter your Gemini API key when prompted
+   → Get a free key at https://aistudio.google.com/apikey (no credit card required)
 5. Complete your profile → start logging
 ```
 
@@ -999,7 +1011,7 @@ fix/*         — bug fixes
 - [ ] pnpm test passes
 - [ ] pnpm type-check passes
 - [ ] If schema changed: migration files committed
-- [ ] If prompt changed: tested against real Claude API
+- [ ] If prompt changed: tested against real Gemini API
 - [ ] No secrets or keys anywhere in the diff
 - [ ] If api-key.ts changed: security review — does it still only write to SecureStore?
 ```

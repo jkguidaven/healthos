@@ -1,7 +1,7 @@
 # AI prompts specification
 
-> **Agent context:** This document is the authoritative spec for every Claude API call in HealthOS.
-> Before touching anything in `src/lib/ai/prompts/` or `src/lib/ai/claude-client.ts`, read this file.
+> **Agent context:** This document is the authoritative spec for every Gemini API call in HealthOS.
+> Before touching anything in `src/lib/ai/prompts/` or `src/lib/ai/ai-client.ts`, read this file.
 > The system prompts here are the exact strings used in production — do not paraphrase them.
 
 ---
@@ -10,18 +10,64 @@
 
 HealthOS makes three distinct AI calls:
 
-| Feature | File | Model | Max tokens | Avg latency |
+| Feature | File | Model | Max output tokens | Avg latency |
 |---|---|---|---|---|
-| Food photo scan | `prompts/food-scan.ts` | claude-sonnet-4-6 | 1024 | ~3s |
-| Workout plan generation | `prompts/workout-plan.ts` | claude-sonnet-4-6 | 4096 | ~8s |
-| Daily coaching | `prompts/coach.ts` | claude-sonnet-4-6 | 2048 | ~4s |
+| Food photo scan | `prompts/food-scan.ts` | gemini-2.5-flash | 1024 | ~3s |
+| Workout plan generation | `prompts/workout-plan.ts` | gemini-2.5-flash | 4096 | ~8s |
+| Daily coaching | `prompts/coach.ts` | gemini-2.5-flash | 2048 | ~4s |
 
-All calls go through `callClaude()` in `src/lib/ai/claude-client.ts`. That function:
+All calls go through `callAI()` in `src/lib/ai/ai-client.ts`. That function:
 1. Reads the API key from SecureStore via `getApiKey()`
 2. Throws `APIKeyMissingError` if no key found
-3. POSTs to `https://api.anthropic.com/v1/messages`
-4. Validates the response with the provided Zod schema
-5. Throws typed errors for `parse_error`, `api_error`, `rate_limit`, `key_invalid`
+3. POSTs to `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=<API_KEY>`
+4. Sets `generationConfig: { responseMimeType: 'application/json', maxOutputTokens: <n> }` for structured JSON output
+5. Validates the response (`candidates[0].content.parts[0].text`) with the provided Zod schema
+6. Throws typed errors for `parse_error`, `api_error`, `rate_limit`, `key_invalid`
+
+### Gemini request shape (reference)
+
+```jsonc
+// POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=AIza...
+{
+  "systemInstruction": {
+    "parts": [{ "text": "<system prompt>" }]
+  },
+  "contents": [
+    {
+      "role": "user",
+      "parts": [
+        // text-only:
+        { "text": "<user message>" }
+        // OR vision:
+        // { "inlineData": { "mimeType": "image/jpeg", "data": "<base64>" } },
+        // { "text": "<user message>" }
+      ]
+    }
+  ],
+  "generationConfig": {
+    "responseMimeType": "application/json",
+    "maxOutputTokens": 1024
+  }
+}
+```
+
+### Gemini response shape (reference)
+
+```jsonc
+{
+  "candidates": [
+    {
+      "content": {
+        "role": "model",
+        "parts": [{ "text": "<JSON string matching the prompt's schema>" }]
+      },
+      "finishReason": "STOP"
+    }
+  ]
+}
+```
+
+The JSON payload returned by the model lives at `candidates[0].content.parts[0].text` as a string — `JSON.parse` it, then validate against the Zod schema.
 
 ---
 
@@ -33,13 +79,12 @@ Given a base64-encoded food photo, identify the food and estimate its macronutri
 ### File
 `src/lib/ai/prompts/food-scan.ts`
 
-### System prompt
+### System instruction
 
 ```
 You are a nutrition analysis assistant. Your job is to identify food in photos and estimate macronutrient content.
 
 RULES:
-- Always respond with valid JSON only. No markdown, no preamble, no explanation outside the JSON.
 - Estimate for a single standard serving unless the image clearly shows multiple portions.
 - If you see multiple distinct food items, identify the primary/largest item.
 - Base estimates on standard nutritional databases (USDA). Round to nearest whole number.
@@ -47,6 +92,8 @@ RULES:
 - If you genuinely cannot identify the food at all, set name to "Unknown food" and confidence to "low" with all macros at 0.
 - Never refuse to respond. Always return the JSON structure even for uncertain cases.
 ```
+
+> Note: explicit "respond with JSON only, no markdown" instructions are no longer required because `responseMimeType: 'application/json'` enforces JSON output at the API level.
 
 ### User message construction
 
@@ -59,21 +106,18 @@ export interface FoodScanInput {
   mealContext?: string       // optional: 'breakfast' | 'lunch' | 'dinner' | 'snack'
 }
 
-export function buildFoodScanMessage(input: FoodScanInput): ContentBlock[] {
+export function buildFoodScanParts(input: FoodScanInput): GeminiPart[] {
   return [
     {
-      type: 'image',
-      source: {
-        type: 'base64',
-        media_type: input.mimeType,
+      inlineData: {
+        mimeType: input.mimeType,
         data: input.imageBase64,
       },
     },
     {
-      type: 'text',
       text: input.mealContext
-        ? `Identify this food and estimate its macros. This is a ${input.mealContext} item. Respond with JSON only.`
-        : 'Identify this food and estimate its macros. Respond with JSON only.',
+        ? `Identify this food and estimate its macros. This is a ${input.mealContext} item.`
+        : 'Identify this food and estimate its macros.',
     },
   ]
 }
@@ -81,7 +125,7 @@ export function buildFoodScanMessage(input: FoodScanInput): ContentBlock[] {
 
 ### Expected response shape
 
-Claude must return this exact JSON structure. No wrapper object, no markdown code fences.
+The Gemini response wraps the JSON payload in `candidates[0].content.parts[0].text`. After `JSON.parse`, the structure must match:
 
 ```json
 {
@@ -115,14 +159,14 @@ export const FoodScanResultSchema = z.object({
 export type FoodScanResult = z.infer<typeof FoodScanResultSchema>
 ```
 
-### Full callClaude invocation
+### Full callAI invocation
 
 ```typescript
 // src/features/nutrition/use-food-scanner.ts
 
-const result = await callClaude({
+const result = await callAI({
   system: FOOD_SCAN_SYSTEM_PROMPT,        // imported from prompts/food-scan.ts
-  userMessage: buildFoodScanMessage(input),
+  userMessage: buildFoodScanParts(input),
   schema: FoodScanResultSchema,
   maxTokens: 1024,
 })
@@ -164,7 +208,7 @@ Generate a structured, periodised workout plan tailored to the user's goal, expe
 ### File
 `src/lib/ai/prompts/workout-plan.ts`
 
-### System prompt
+### System instruction
 
 ```
 You are an experienced strength and conditioning coach specialising in natural body recomposition. You create periodised workout programmes grounded in sports science.
@@ -187,7 +231,6 @@ RECOMPOSITION-SPECIFIC RULES:
 - Advanced: PPL or specialisation blocks, 5–6 sessions/week, RPE-based loading.
 
 OUTPUT RULES:
-- Respond with valid JSON only. No markdown, no preamble, no explanation outside the JSON.
 - Exercise names must be standard, searchable names (e.g. "Barbell back squat" not "squats").
 - sets and reps fields are integers. weight_kg is null (user fills in their working weight).
 - Include a progression_note per exercise explaining exactly how to progress.
@@ -224,9 +267,7 @@ User profile:
 - Experience: ${request.experienceLevel}
 - Training days per week: ${request.daysPerWeek}
 - Available equipment: ${request.equipment.join(', ')}
-${request.focusMuscles?.length ? `- Muscle groups to emphasise: ${request.focusMuscles.join(', ')}` : ''}
-
-Respond with JSON only.`
+${request.focusMuscles?.length ? `- Muscle groups to emphasise: ${request.focusMuscles.join(', ')}` : ''}`
 }
 ```
 
@@ -303,12 +344,12 @@ export const WorkoutPlanResultSchema = z.object({
 export type WorkoutPlanResult = z.infer<typeof WorkoutPlanResultSchema>
 ```
 
-### Full callClaude invocation
+### Full callAI invocation
 
 ```typescript
 // src/features/workout/use-workout-plan.ts
 
-const result = await callClaude({
+const result = await callAI({
   system: WORKOUT_PLAN_SYSTEM_PROMPT,
   userMessage: buildWorkoutPlanPrompt(request),
   schema: WorkoutPlanResultSchema,
@@ -376,7 +417,7 @@ Synthesise the user's nutrition, workout, and body metrics data from the past 7 
 ### File
 `src/lib/ai/prompts/coach.ts`
 
-### System prompt
+### System instruction
 
 ```
 You are a body recomposition coach. You give personalised, evidence-based coaching based on a user's actual logged data.
@@ -396,7 +437,6 @@ YOUR TONE:
 - Keep the coaching message under 3 sentences. Insights and action items can be longer.
 
 OUTPUT RULES:
-- Respond with valid JSON only. No markdown, no preamble, no explanation outside the JSON.
 - message: 1–3 sentences. The main coaching thought for today.
 - insights: 2–4 strings. Specific observations from the data. Can be positive or constructive.
 - action_items: 1–3 strings. Concrete things to do today or this week.
@@ -544,7 +584,7 @@ export function buildCoachPrompt(context: CoachContext): string {
     `Food logging streak: ${context.streaks.loggingStreak} days`,
     `Workout streak: ${context.streaks.workoutStreak} weeks`,
     ``,
-    `Based on this data, provide today's coaching. Respond with JSON only.`,
+    `Based on this data, provide today's coaching.`,
   )
 
   return lines.join('\n')
@@ -586,12 +626,12 @@ export const CoachResultSchema = z.object({
 export type CoachResult = z.infer<typeof CoachResultSchema>
 ```
 
-### Full callClaude invocation
+### Full callAI invocation
 
 ```typescript
 // src/features/coach/use-coach.ts
 
-const result = await callClaude({
+const result = await callAI({
   system: COACH_SYSTEM_PROMPT,
   userMessage: buildCoachPrompt(context),
   schema: CoachResultSchema,
@@ -601,7 +641,7 @@ const result = await callClaude({
 
 ### Caching strategy
 
-Coach responses are cached in the `coach_entry` SQLite table. Do not call Claude on every screen mount.
+Coach responses are cached in the `coach_entry` SQLite table. Do not call Gemini on every screen mount.
 
 ```typescript
 // src/lib/db/queries/coach.ts
@@ -616,7 +656,7 @@ async function getTodayCoachEntry(date: string): Promise<CoachResult | null> {
   return JSON.parse(row[0].content) as CoachResult
 }
 
-// After successful Claude call: save to cache
+// After successful Gemini call: save to cache
 async function saveCoachEntry(date: string, result: CoachResult): Promise<void> {
   await db.insert(coachEntryTable).values({
     date,
@@ -631,7 +671,7 @@ async function saveCoachEntry(date: string, result: CoachResult): Promise<void> 
 
 ### Context assembly query
 
-Assembling `CoachContext` requires reading from five tables. This function should live in `src/lib/db/queries/coach.ts` and be called once before the Claude call:
+Assembling `CoachContext` requires reading from five tables. This function should live in `src/lib/db/queries/coach.ts` and be called once before the Gemini call:
 
 ```typescript
 async function buildCoachContext(db: DrizzleDB, profileId: number): Promise<CoachContext>
@@ -643,19 +683,52 @@ async function buildCoachContext(db: DrizzleDB, profileId: number): Promise<Coac
 
 ## Shared infrastructure
 
-### `callClaude` type signature
+### `callAI` type signature
 
 ```typescript
-// src/lib/ai/claude-client.ts
+// src/lib/ai/ai-client.ts
 
-interface CallClaudeParams<T> {
-  system: string
-  userMessage: string | ContentBlock[]
-  schema: z.ZodType<T>
-  maxTokens: number
+export interface GeminiInlineDataPart {
+  inlineData: {
+    mimeType: 'image/jpeg' | 'image/png' | 'image/webp'
+    data: string                  // base64-encoded
+  }
 }
 
-async function callClaude<T>(params: CallClaudeParams<T>): Promise<T>
+export interface GeminiTextPart {
+  text: string
+}
+
+export type GeminiPart = GeminiInlineDataPart | GeminiTextPart
+
+interface CallAIParams<T> {
+  system: string                  // becomes systemInstruction.parts[0].text
+  userMessage: string | GeminiPart[]
+  schema: z.ZodType<T>
+  maxTokens: number               // becomes generationConfig.maxOutputTokens
+}
+
+async function callAI<T>(params: CallAIParams<T>): Promise<T>
+```
+
+Internally, `callAI` builds the request body as:
+
+```typescript
+const body = {
+  systemInstruction: { parts: [{ text: params.system }] },
+  contents: [
+    {
+      role: 'user',
+      parts: typeof params.userMessage === 'string'
+        ? [{ text: params.userMessage }]
+        : params.userMessage,
+    },
+  ],
+  generationConfig: {
+    responseMimeType: 'application/json',
+    maxOutputTokens: params.maxTokens,
+  },
+}
 ```
 
 ### Error types
@@ -674,14 +747,14 @@ export class APIKeyInvalidError extends Error {
 export class AIParseError extends Error {
   readonly code = 'parse_error' as const
   constructor(public readonly raw: string) {
-    super('Claude returned a response that did not match the expected schema')
+    super('The AI returned a response that did not match the expected schema')
   }
 }
 
 export class AIApiError extends Error {
   readonly code = 'api_error' as const
   constructor(public readonly status: number) {
-    super(`Anthropic API returned HTTP ${status}`)
+    super(`The AI provider returned HTTP ${status}`)
   }
 }
 
@@ -702,11 +775,20 @@ export type AIError =
 
 ### Response parsing pattern
 
-Claude is instructed to return JSON only, but defensively strip markdown fences before parsing:
+Gemini's `responseMimeType: 'application/json'` enforces JSON output, but the app still defensively strips markdown fences before parsing in case the model ever wraps content:
 
 ```typescript
-function parseClaudeJson<T>(raw: string, schema: z.ZodType<T>): T {
-  // Strip markdown code fences if present (defensive)
+function parseGeminiJson<T>(response: unknown, schema: z.ZodType<T>): T {
+  // Extract the text payload from candidates[0].content.parts[0].text
+  const raw = (response as {
+    candidates?: { content?: { parts?: { text?: string }[] } }[]
+  })?.candidates?.[0]?.content?.parts?.[0]?.text
+
+  if (typeof raw !== 'string') {
+    throw new AIParseError(JSON.stringify(response))
+  }
+
+  // Defensive: strip markdown code fences if present
   const cleaned = raw
     .replace(/^```json\s*/i, '')
     .replace(/^```\s*/i, '')
@@ -735,7 +817,7 @@ function parseClaudeJson<T>(raw: string, schema: z.ZodType<T>): T {
 Before committing changes to any prompt file, test it manually:
 
 ```bash
-# From repo root — requires ANTHROPIC_API_KEY in environment
+# From repo root — requires GEMINI_API_KEY in environment
 pnpm prompt:test food-scan    # runs test in scripts/test-prompts/food-scan.ts
 pnpm prompt:test workout-plan
 pnpm prompt:test coach
@@ -748,5 +830,5 @@ The `scripts/test-prompts/` directory is not part of the app bundle — it's dev
 ---
 
 *Last updated: April 2026.*
-*This document is the source of truth for all Claude API calls in HealthOS.*
+*This document is the source of truth for all Gemini API calls in HealthOS.*
 *Changes to system prompts must be tested against the real API before committing.*

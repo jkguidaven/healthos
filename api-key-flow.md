@@ -1,19 +1,19 @@
 # API key flow
 
-> Agent reference: this document describes the full lifecycle of the Anthropic API key in HealthOS.
+> Agent reference: this document describes the full lifecycle of the Gemini API key in HealthOS.
 > Read this before modifying anything in `src/lib/ai/api-key.ts`, `src/features/onboarding/api-key-step.tsx`, or `src/features/settings/api-key-settings.tsx`.
 
 ---
 
 ## Overview
 
-HealthOS requires an Anthropic API key to use AI features (food scanning, workout plan generation, coaching). The key is entered by the user inside the app at first launch and stored securely on-device. There is no `.env` file, no server, and no shared key — every user brings their own.
+HealthOS requires a Google Gemini API key to use AI features (food scanning, workout plan generation, coaching). The key is entered by the user inside the app at first launch and stored securely on-device. There is no `.env` file, no server, and no shared key — every user brings their own free key from Google AI Studio.
 
 ```
 User opens app for first time
   → onboarding: profile form (Step 1)
   → onboarding: api key input (Step 2)
-      → validate key against Anthropic API
+      → validate key against Google's models list endpoint
       → on success: save to SecureStore, set hasApiKey = true
       → navigate to dashboard
 ```
@@ -24,7 +24,7 @@ User opens app for first time
 
 | Where | What | Why |
 |---|---|---|
-| `expo-secure-store` key `'anthropic_api_key'` | The raw key string | Encrypted via iOS Keychain / Android Keystore |
+| `expo-secure-store` key `'gemini_api_key'` | The raw key string | Encrypted via iOS Keychain / Android Keystore |
 | Zustand `ui-store.hasApiKey` | Boolean only | Fast gate check without hitting SecureStore on every render |
 | Nowhere else | — | Key is never in SQLite, AsyncStorage, logs, or state |
 
@@ -35,7 +35,7 @@ User opens app for first time
 | File | Responsibility |
 |---|---|
 | `src/lib/ai/api-key.ts` | All SecureStore read/write/validate operations — the single source of truth |
-| `src/lib/ai/claude-client.ts` | Calls `getApiKey()` before every API request |
+| `src/lib/ai/ai-client.ts` | Calls `getApiKey()` before every API request |
 | `src/features/onboarding/api-key-step.tsx` | First-launch key collection UI |
 | `src/features/settings/api-key-settings.tsx` | Post-onboarding key management UI |
 | `src/stores/ui-store.ts` | `hasApiKey: boolean` — hydrated at boot, updated on save/clear |
@@ -46,11 +46,11 @@ User opens app for first time
 ## `src/lib/ai/api-key.ts` — full API
 
 ```typescript
-const SECURE_STORE_KEY = 'anthropic_api_key' as const
+const SECURE_STORE_KEY = 'gemini_api_key' as const
 
 /**
  * Returns the stored API key, or null if not set.
- * This is the only function claude-client.ts should call.
+ * This is the only function ai-client.ts should call.
  */
 export async function getApiKey(): Promise<string | null>
 
@@ -66,7 +66,10 @@ export async function saveApiKey(key: string): Promise<void>
 export async function clearApiKey(): Promise<void>
 
 /**
- * Makes a minimal call to /v1/messages (max_tokens: 1) to confirm the key works.
+ * Makes a lightweight GET request to Google's models list endpoint
+ * (https://generativelanguage.googleapis.com/v1beta/models?key=<key>)
+ * to confirm the key is accepted by the Gemini API.
+ *
  * Does NOT save the key — caller is responsible for calling saveApiKey() on success.
  */
 export async function validateApiKey(key: string): Promise<{
@@ -98,7 +101,7 @@ export class APIKeyInvalidError extends Error {
 }
 ```
 
-`claude-client.ts` throws `APIKeyMissingError` when `getApiKey()` returns null. It throws `APIKeyInvalidError` when the API responds with HTTP 401.
+`ai-client.ts` throws `APIKeyMissingError` when `getApiKey()` returns null. It throws `APIKeyInvalidError` when the Gemini API responds with an authentication failure (HTTP 400/401/403 with an `API_KEY_INVALID` reason).
 
 React Query catches both in `onError` callbacks in feature hooks. The UI layer distinguishes between them:
 
@@ -108,7 +111,7 @@ React Query catches both in `onError` callbacks in feature hooks. The UI layer d
 | `APIKeyInvalidError` | Banner: "API key was rejected" + "Update key" button → Settings |
 | `rate_limit` | Banner: "Rate limit hit, retrying in Xs" (React Query handles retry) |
 | `api_error` | Banner: "Something went wrong" + retry button |
-| `parse_error` | Banner: "Unexpected response from Claude" + retry button |
+| `parse_error` | Banner: "Unexpected response from the AI" + retry button |
 
 ---
 
@@ -122,19 +125,19 @@ UI state machine:
   success    → brief success state, then navigates to dashboard
 ```
 
-Input: `TextInput` with `secureTextEntry={true}`. The key is never shown in plain text after the user types it — the input clears on blur.
+Input: `TextInput` with `secureTextEntry={true}` and placeholder `AIza…`. The key is never shown in plain text after the user types it — the input clears on blur.
 
 The step renders a two-line explanation:
-> "HealthOS uses the Anthropic Claude API for AI features. Your key is stored securely on this device and never sent anywhere except Anthropic's servers."
+> "HealthOS uses Google's Gemini API for AI features. Your key is stored securely on this device and never sent anywhere except Google's servers."
 
-And a tappable link: "Get a free API key at console.anthropic.com →"
+And a tappable link: "Get a free API key at aistudio.google.com/apikey →" with a small "Free tier — no credit card required" note.
 
 ---
 
 ## Settings screen — `api-key-settings.tsx`
 
 Shows:
-- Masked key display: `sk-ant-api03-••••••••••••••••` (first 14 chars + mask)
+- Masked key display: `AIza••••••••••••••••` (first 4 chars + mask)
 - "Update key" button → opens a modal with the same input + validation flow
 - "Remove key" button → confirmation alert → `clearApiKey()` → back to onboarding step 2
 
@@ -166,7 +169,7 @@ jest.mock('expo-secure-store', () => ({
 }))
 ```
 
-`validateApiKey` is tested with MSW intercepting the Anthropic endpoint — never calls the real API in tests.
+`validateApiKey` is tested with MSW intercepting the Gemini models endpoint (`https://generativelanguage.googleapis.com/v1beta/models`) — never calls the real API in tests.
 
 ---
 

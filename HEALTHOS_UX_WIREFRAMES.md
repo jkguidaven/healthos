@@ -178,21 +178,21 @@ z.object({
 ### Screen 4 — API key
 
 **File:** `app/(onboarding)/api-key.tsx`
-**Purpose:** Collect and validate the Anthropic API key; store in SecureStore.
+**Purpose:** Collect and validate the Gemini API key; store in SecureStore.
 
 **Layout:**
 1. Progress bar — 3 of 3 filled
-2. Screen title — "Connect Claude AI"
-3. Subtitle — "Powers food scanning, workout plans & coaching"
+2. Screen title — "Connect Gemini"
+3. Subtitle — "Powers food scanning, workout plans & coaching · free tier, no credit card required"
 4. Info card — `bg-purple-50`, `rounded-lg`, `p-10`, purple text, 11px, 2 sentences explaining secure storage
-5. API key input — label "Anthropic API key" (10px tertiary), `TextInput` with `secureTextEntry={true}`, masked display, `bg-surface-secondary border rounded-lg p-9 px-11`. Show/hide toggle link on right edge.
-6. Get key link — "Get a free key at console.anthropic.com →", 11px, brand blue, right-aligned
+5. API key input — label "Gemini API key" (10px tertiary), `TextInput` with `secureTextEntry={true}`, masked display, placeholder `AIza…`, `bg-surface-secondary border rounded-lg p-9 px-11`. Show/hide toggle link on right edge.
+6. Get key link — "Get a free key at aistudio.google.com/apikey →", 11px, brand blue, right-aligned
 7. Validate & Save CTA — primary green
 8. **Validation states:**
    - Idle: CTA shows "Validate & save"
    - Loading: CTA replaced with spinner + "Validating…" text, input disabled
    - Success: Green confirmation row appears below CTA — circle dot + "Key validated — you're all set", `bg-teal-50`, `rounded-lg`
-   - Error: Red row appears — circle dot + specific error message. Errors: `invalid_key` → "Key was rejected by Anthropic", `network_error` → "Check your connection and try again", `rate_limit` → "Rate limit hit — try again in a moment"
+   - Error: Red row appears — circle dot + specific error message. Errors: `invalid_key` → "Key was rejected by Google", `network_error` → "Check your connection and try again", `rate_limit` → "Rate limit hit — try again in a moment"
 9. Feature unlock card — `bg-surface-secondary`, `rounded-lg`, 3 bullet points listing AI features (10px tertiary label + 11px body)
 10. Skip link — "Skip for now (some features unavailable)", 10px, tertiary, centred — calls `clearApiKey()` and navigates to main app
 
@@ -219,7 +219,7 @@ z.object({
 **Data sources:**
 - Calories/protein: `useLiveQuery` on today's `food_log` rows, summed
 - Macros: same query
-- AI coach card: today's `coach_entry` from SQLite (cached) or triggers new call if empty
+- AI coach card: today's `coach_entry` from SQLite (cached) or triggers new Gemini call if empty
 - Workouts: count of `session` rows this week
 - Weight: today's `body_metric` row
 
@@ -307,7 +307,7 @@ function getRecompSignal(weightDelta: number, waistDelta: number, armDelta: numb
 
 **File:** `src/features/coach/coach-screen.tsx`
 **Tab icon:** Coach (circle)
-**Purpose:** Weekly digest + daily check-in history powered by Claude.
+**Purpose:** Weekly digest + daily check-in history powered by Gemini.
 
 **Layout:**
 1. Header — "AI coach" left, "Week N of 8" right (secondary)
@@ -338,7 +338,7 @@ function getRecompSignal(weightDelta: number, waistDelta: number, armDelta: numb
 - Status bar: white icons
 - Top bar: "Scan food" (12px white/500) left, "✕ cancel" (11px white/60%) right, `px-14`, `pt-0`
 - Viewfinder — centred, 150×150px. Semi-transparent border `border-zinc-700`. Green corner brackets (20×20px each corner, 2.5px stroke, brand green). Inside: optional food placeholder tint.
-- Instruction text — "Centre food in frame · Claude will identify and estimate macros", 9px white/50%, centred, above shutter row
+- Instruction text — "Centre food in frame · Gemini will identify and estimate macros", 9px white/50%, centred, above shutter row
 - Bottom action row — centred, `gap-6`:
   - Left: "barcode" pill button (`bg-white/15 text-white`)
   - Centre: shutter button — 52px circle white, inner 38px circle with `border-2 border-black`. Tap → capture.
@@ -356,7 +356,7 @@ function getRecompSignal(weightDelta: number, waistDelta: number, armDelta: numb
 ### Overlay 2 — Scan confirm result
 
 **File:** `src/features/nutrition/food-scan-confirm.tsx`
-**Presented:** After successful camera capture + Claude response
+**Presented:** After successful camera capture + Gemini response
 
 **Layout:**
 1. Header — "Confirm scan result" (13px/500) left, "retake" (10px blue) right
@@ -365,7 +365,7 @@ function getRecompSignal(weightDelta: number, waistDelta: number, armDelta: numb
 4. Adjust hint — "Adjust values if needed", 10px tertiary
 5. Portion + meal row — 2-column: Meal selector (Breakfast/Lunch/Dinner/Snack) + Portion selector (0.5×/1×/1.5×/2×). Both `bg-surface-secondary rounded-lg p-6 px-8`.
 6. Action row — 2 columns: "Edit values" (secondary) + "Log this" (primary green).
-7. Attribution text — 9px tertiary, centred, below buttons: "Claude identified this as [food] with ~[N]% confidence. Portion estimated from image size."
+7. Attribution text — 9px tertiary, centred, below buttons: "Gemini identified this as [food] with ~[N]% confidence. Portion estimated from image size."
 
 **Edit values flow:** Tapping "Edit values" turns the result card fields into inline text inputs.
 
@@ -411,17 +411,17 @@ function getRecompSignal(weightDelta: number, waistDelta: number, armDelta: numb
 **Presentation:** Bottom sheet modal
 
 **Layout:**
-1. Header — "Generate workout plan" (13px/500), "Claude will build a personalised plan" (10px secondary)
+1. Header — "Generate workout plan" (13px/500), "Gemini will build a personalised plan" (10px secondary)
 2. Training split — 3-column pill row: PPL / Upper-Lower / Full body. Selected: `bg-purple-50 border border-brand-purple` with purple text. Unselected: `bg-surface-secondary`.
 3. Days per week — stepper row (– / N / +) or `bg-surface-secondary` field. Range 2–6.
 4. Experience level — `bg-surface-secondary` field. Options: Beginner / Intermediate / Advanced.
 5. Equipment chips — Horizontal wrap of chip pills. Selected: `bg-teal-50 text-teal-800`. Unselected: `bg-surface-secondary`. "+ add" chip at end → text input for custom equipment.
 6. Plan duration — `bg-surface-secondary` field. Options: 4 weeks / 6 weeks / 8 weeks / 12 weeks.
-7. Generate CTA — primary green, "Generate plan with Claude"
+7. Generate CTA — primary green, "Generate plan with Gemini"
 8. Footer note — "Takes ~5 seconds · uses your recomp goal + profile", 9px tertiary, centred
 
 **Loading state (after tap):**
-- Button replaced with: spinner + "Claude is building your plan…"
+- Button replaced with: spinner + "Gemini is building your plan…"
 - Estimated time shown: "Usually under 10 seconds"
 
 **Success state:**
@@ -441,8 +441,8 @@ function getRecompSignal(weightDelta: number, waistDelta: number, armDelta: numb
 **Layout — grouped list sections:**
 
 **Section: AI**
-- "Anthropic API key" row — value: masked `sk-ant-api03-••••••••••••`, right: "update" (blue). Tap → API key update modal.
-- "Model" row — value: `claude-sonnet-4-6`, right: dash (not editable, informational only).
+- "Gemini API key" row — value: masked `AIza••••••••••••`, right: "update" (blue). Tap → API key update modal.
+- "Model" row — value: `gemini-2.5-flash`, right: dash (not editable, informational only).
 
 **Section: Profile**
 - "Edit profile" row → `app/onboarding/profile` re-opened in edit mode
@@ -476,7 +476,7 @@ Non-AI features (manual food entry, metric logging, workout logging) remain full
 
 ### API key invalid / expired
 
-When Claude API returns 401:
+When Gemini API returns 400/401/403:
 
 **Banner** (same style as above):
 ```
@@ -486,7 +486,7 @@ When Claude API returns 401:
 
 ### Scan failed
 
-When Claude vision returns low-confidence or unparseable result:
+When Gemini vision returns low-confidence or unparseable result:
 
 **Confirm screen** shows with `confidence === 'low'` badge + amber card instead of green:
 ```

@@ -1,8 +1,8 @@
 // ═══════════════════════════════════════════════════════════════
-// src/lib/ai/claude-client.ts
+// src/lib/ai/ai-client.ts
 // ─────────────────────────────────────────────────────────────
 // The ONLY file in the codebase that makes requests to the
-// Anthropic API. All features call callClaude() — never fetch() directly.
+// Gemini API. All features call callAI() — never fetch() directly.
 // ═══════════════════════════════════════════════════════════════
 
 import * as SecureStore from 'expo-secure-store'
@@ -15,52 +15,62 @@ import {
   AIRateLimitError,
 } from './types'
 
-const API_URL      = 'https://api.anthropic.com/v1/messages'
-const MODEL        = 'claude-sonnet-4-6'
-const API_VERSION  = '2023-06-01'
-const SECURE_KEY   = 'anthropic_api_key'
+const MODEL       = 'gemini-2.5-flash'
+const API_URL     = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`
+const SECURE_KEY  = 'gemini_api_key'
 
-export type ContentBlock =
-  | { type: 'text'; text: string }
-  | { type: 'image'; source: { type: 'base64'; media_type: string; data: string } }
+export interface GeminiInlineDataPart {
+  inlineData: {
+    mimeType: 'image/jpeg' | 'image/png' | 'image/webp'
+    data: string
+  }
+}
 
-export interface CallClaudeParams<T> {
+export interface GeminiTextPart {
+  text: string
+}
+
+export type GeminiPart = GeminiInlineDataPart | GeminiTextPart
+
+export interface CallAIParams<T> {
   system: string
-  userMessage: string | ContentBlock[]
+  userMessage: string | GeminiPart[]
   schema: z.ZodType<T>
   maxTokens: number
 }
 
-export async function callClaude<T>(params: CallClaudeParams<T>): Promise<T> {
+export async function callAI<T>(params: CallAIParams<T>): Promise<T> {
   // 1. Read API key from SecureStore
   const apiKey = await SecureStore.getItemAsync(SECURE_KEY)
   if (!apiKey) throw new APIKeyMissingError()
 
-  // 2. Build content array
-  const content: ContentBlock[] =
+  // 2. Build parts array for the user content
+  const parts: GeminiPart[] =
     typeof params.userMessage === 'string'
-      ? [{ type: 'text', text: params.userMessage }]
+      ? [{ text: params.userMessage }]
       : params.userMessage
 
-  // 3. Make the request
-  const response = await fetch(API_URL, {
+  // 3. Make the request — API key is passed as a query parameter
+  const response = await fetch(`${API_URL}?key=${encodeURIComponent(apiKey)}`, {
     method: 'POST',
     headers: {
-      'Content-Type':      'application/json',
-      'x-api-key':         apiKey,
-      'anthropic-version': API_VERSION,
+      'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model:      MODEL,
-      max_tokens: params.maxTokens,
-      system:     params.system,
-      messages:   [{ role: 'user', content }],
+      systemInstruction: { parts: [{ text: params.system }] },
+      contents: [{ role: 'user', parts }],
+      generationConfig: {
+        responseMimeType: 'application/json',
+        maxOutputTokens: params.maxTokens,
+      },
     }),
   })
 
   // 4. Handle HTTP errors
   if (!response.ok) {
-    if (response.status === 401) throw new APIKeyInvalidError()
+    if (response.status === 400 || response.status === 401 || response.status === 403) {
+      throw new APIKeyInvalidError()
+    }
     if (response.status === 429) {
       const retryAfter = parseInt(response.headers.get('retry-after') ?? '60', 10)
       throw new AIRateLimitError(retryAfter)
@@ -68,11 +78,12 @@ export async function callClaude<T>(params: CallClaudeParams<T>): Promise<T> {
     throw new AIApiError(response.status)
   }
 
-  // 5. Parse response
+  // 5. Parse response — Gemini returns text at candidates[0].content.parts[0].text
   const data = await response.json()
-  const rawText: string = data?.content?.[0]?.text ?? ''
+  const rawText: string =
+    data?.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
 
-  // 6. Strip markdown fences defensively
+  // 6. Strip markdown fences defensively (responseMimeType: 'application/json' usually prevents this)
   const cleaned = rawText
     .replace(/^```json\s*/i, '')
     .replace(/^```\s*/i, '')
@@ -107,8 +118,8 @@ export async function callClaude<T>(params: CallClaudeParams<T>): Promise<T> {
 import * as SecureStore from 'expo-secure-store'
 import { useUIStore } from '../stores/ui-store'
 
-const SECURE_KEY = 'anthropic_api_key'
-const TEST_URL   = 'https://api.anthropic.com/v1/messages'
+const SECURE_KEY = 'gemini_api_key'
+const VALIDATE_URL = 'https://generativelanguage.googleapis.com/v1beta/models'
 
 export async function getApiKey(): Promise<string | null> {
   return SecureStore.getItemAsync(SECURE_KEY)
@@ -136,23 +147,16 @@ export interface ValidationResult {
 
 export async function validateApiKey(key: string): Promise<ValidationResult> {
   try {
-    const response = await fetch(TEST_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type':      'application/json',
-        'x-api-key':         key,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model:      'claude-sonnet-4-6',
-        max_tokens: 1,
-        messages:   [{ role: 'user', content: 'hi' }],
-      }),
+    // Lightweight GET — lists available models, returns 200 if the key is valid.
+    const response = await fetch(`${VALIDATE_URL}?key=${encodeURIComponent(key)}`, {
+      method: 'GET',
     })
 
-    if (response.status === 401)                       return { valid: false, error: 'invalid_key' }
-    if (response.status === 429)                       return { valid: false, error: 'rate_limit' }
-    if (response.ok || response.status === 400)        return { valid: true }   // 400 = bad request but key was accepted
+    if (response.status === 400 || response.status === 401 || response.status === 403) {
+      return { valid: false, error: 'invalid_key' }
+    }
+    if (response.status === 429) return { valid: false, error: 'rate_limit' }
+    if (response.ok) return { valid: true }
     return { valid: false, error: 'network_error' }
   } catch {
     return { valid: false, error: 'network_error' }
@@ -190,77 +194,84 @@ afterAll(() => server.close())
 import { setupServer } from 'msw/node'
 import { http, HttpResponse } from 'msw'
 
-// Default Anthropic API handler — returns a valid food scan response
-const defaultClaudeHandler = http.post(
-  'https://api.anthropic.com/v1/messages',
-  () => {
-    return HttpResponse.json({
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify({
-            name:                'Test food',
-            calories:            500,
-            protein_g:           40,
-            carbs_g:             50,
-            fat_g:               15,
-            serving_description: '1 serving',
-            confidence:          'high',
-          }),
+const GEMINI_URL_PATTERN =
+  'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent'
+
+function geminiTextResponse(payload: unknown) {
+  return HttpResponse.json({
+    candidates: [
+      {
+        content: {
+          role: 'model',
+          parts: [{ text: JSON.stringify(payload) }],
         },
-      ],
-    })
-  },
+        finishReason: 'STOP',
+      },
+    ],
+  })
+}
+
+// Default Gemini handler — returns a valid food scan response
+const defaultGeminiHandler = http.post(GEMINI_URL_PATTERN, () =>
+  geminiTextResponse({
+    name:                'Test food',
+    calories:            500,
+    protein_g:           40,
+    carbs_g:             50,
+    fat_g:               15,
+    serving_description: '1 serving',
+    confidence:          'high',
+  }),
 )
 
-export const server = setupServer(defaultClaudeHandler)
+export const server = setupServer(defaultGeminiHandler)
 
 // ─── Reusable handler overrides (import these in test files) ───
 
-export const claudeWorkoutPlanHandler = http.post(
-  'https://api.anthropic.com/v1/messages',
-  () =>
-    HttpResponse.json({
-      content: [{
-        type: 'text',
-        text: JSON.stringify({
-          plan_name:      'Test PPL plan',
-          plan_rationale: 'A test plan for unit testing.',
-          split_type:     'ppl',
-          weeks_total:    8,
-          days_per_week:  4,
-          days: [{
-            day_name:                  'Push A',
-            muscle_groups:             ['chest', 'shoulders', 'triceps'],
-            estimated_duration_minutes: 60,
-            exercises: [{
-              name:             'Barbell bench press',
-              sets:             4,
-              reps:             8,
-              rest_seconds:     120,
-              weight_kg:        null,
-              progression_note: 'Add 2.5kg when all sets complete.',
-            }],
-          }],
-        }),
+export const geminiWorkoutPlanHandler = http.post(GEMINI_URL_PATTERN, () =>
+  geminiTextResponse({
+    plan_name:      'Test PPL plan',
+    plan_rationale: 'A test plan for unit testing.',
+    split_type:     'ppl',
+    weeks_total:    8,
+    days_per_week:  4,
+    days: [{
+      day_name:                  'Push A',
+      muscle_groups:             ['chest', 'shoulders', 'triceps'],
+      estimated_duration_minutes: 60,
+      exercises: [{
+        name:             'Barbell bench press',
+        sets:             4,
+        reps:             8,
+        rest_seconds:     120,
+        weight_kg:        null,
+        progression_note: 'Add 2.5kg when all sets complete.',
       }],
-    }),
+    }],
+  }),
 )
 
-export const claudeRateLimitHandler = http.post(
-  'https://api.anthropic.com/v1/messages',
+export const geminiRateLimitHandler = http.post(
+  GEMINI_URL_PATTERN,
   () => new HttpResponse(null, { status: 429, headers: { 'retry-after': '30' } }),
 )
 
-export const claudeInvalidKeyHandler = http.post(
-  'https://api.anthropic.com/v1/messages',
-  () => new HttpResponse(null, { status: 401 }),
+export const geminiInvalidKeyHandler = http.post(
+  GEMINI_URL_PATTERN,
+  () => new HttpResponse(null, { status: 400 }),
 )
 
-export const claudeMalformedResponseHandler = http.post(
-  'https://api.anthropic.com/v1/messages',
-  () => HttpResponse.json({
-    content: [{ type: 'text', text: 'Sorry, I cannot help with that.' }],
+export const geminiMalformedResponseHandler = http.post(GEMINI_URL_PATTERN, () =>
+  HttpResponse.json({
+    candidates: [
+      {
+        content: {
+          role: 'model',
+          parts: [{ text: 'Sorry, I cannot help with that.' }],
+        },
+        finishReason: 'STOP',
+      },
+    ],
   }),
 )
 
@@ -470,7 +481,7 @@ jobs:
 - [ ] `pnpm type-check` passes
 - [ ] `pnpm test` passes
 - [ ] If schema changed: migration files are committed (`pnpm db:generate` was run)
-- [ ] If prompt changed: tested against real Claude API manually
+- [ ] If prompt changed: tested against real Gemini API manually
 - [ ] No secrets, API keys, or `.env` files in the diff
 - [ ] If `src/lib/ai/api-key.ts` changed: key is only written to SecureStore
 

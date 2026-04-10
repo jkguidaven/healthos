@@ -15,7 +15,7 @@
 |---|---|---|
 | `HEALTHOS_PROJECT_GUIDE.md` | Full architecture, tech stack, design decisions, build phases | `docs/HEALTHOS_PROJECT_GUIDE.md` |
 | `HEALTHOS_UX_WIREFRAMES.md` | All 16 screens — layout specs, component patterns, states | `docs/HEALTHOS_UX_WIREFRAMES.md` |
-| `ai-prompts.md` | Exact Claude system prompts, context shapes, Zod schemas | `docs/ai-prompts.md` |
+| `ai-prompts.md` | Exact Gemini system prompts, context shapes, Zod schemas | `docs/ai-prompts.md` |
 | `api-key-flow.md` | API key lifecycle — SecureStore, onboarding, settings, boot | `docs/api-key-flow.md` |
 
 ### Reference code
@@ -23,7 +23,7 @@
 |---|---|---|
 | `schema.ts` | Complete Drizzle schema — all 11 tables with types | `src/lib/db/schema.ts` |
 | `canonical-feature-example.ts` | Full body fat feature — all 4 layers to copy | `docs/canonical-feature-example.ts` |
-| `infrastructure.ts` | `claude-client.ts`, `api-key.ts`, test utils, CI, PR template | Split — see file header comments |
+| `infrastructure.ts` | `ai-client.ts`, `api-key.ts`, test utils, CI, PR template | Split — see file header comments |
 
 ### Subagents
 | File | Purpose | Where it lives in repo |
@@ -35,7 +35,7 @@
 |---|---|
 | `decisions/001-local-first.md` | Why no backend |
 | `decisions/002-drizzle-over-raw-sql.md` | Why Drizzle ORM |
-| `decisions/003-claude-api-model.md` | Why claude-sonnet-4-6 |
+| `decisions/003-claude-api-model.md` | Why Gemini (gemini-2.5-flash) is the AI provider |
 | `decisions/004-in-app-api-key.md` | Why SecureStore instead of .env |
 
 ## How to use when building
