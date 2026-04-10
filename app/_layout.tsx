@@ -3,7 +3,7 @@ import { Stack } from 'expo-router'
 import { SQLiteProvider, useSQLiteContext, type SQLiteDatabase } from 'expo-sqlite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
-import { Text, View } from 'react-native'
+import { Platform, Text, View } from 'react-native'
 import * as SplashScreen from 'expo-splash-screen'
 import { useFonts } from 'expo-font'
 import {
@@ -73,7 +73,7 @@ function MigrationGate({ children }: { children: React.ReactNode }) {
 
   if (error) {
     return (
-      <View className="flex-1 items-center justify-center bg-mint-50 px-6">
+      <View className="flex-1 items-center justify-center bg-white px-6">
         <Text className="font-sans-bold text-[18px] text-slate-900 mb-2">
           Database setup failed
         </Text>
@@ -87,6 +87,44 @@ function MigrationGate({ children }: { children: React.ReactNode }) {
   if (!ready) return null
 
   return <>{children}</>
+}
+
+/**
+ * Web fallback shown when the page is NOT in a cross-origin-isolated
+ * context. expo-sqlite's web build (wa-sqlite) requires SharedArrayBuffer,
+ * which is only available when the dev server sends COOP + COEP headers.
+ * Some Metro/proxy setups silently drop those headers, so instead of
+ * crashing the app we render a friendly mobile-only message.
+ */
+function WebUnsupportedFallback(): React.ReactElement {
+  return (
+    <View className="flex-1 items-center justify-center bg-white px-8">
+      <View className="w-full max-w-md items-center rounded-3xl border border-slate-100 bg-white p-8">
+        <View className="h-16 w-16 items-center justify-center rounded-full bg-mint-100">
+          <Text className="text-[28px]">📱</Text>
+        </View>
+        <Text
+          className="mt-5 text-center font-sans-bold text-[22px] text-slate-900"
+          style={{ letterSpacing: -0.3 }}
+        >
+          Open HealthOS on your phone
+        </Text>
+        <Text
+          className="mt-3 text-center font-sans text-[14px] text-slate-600"
+          style={{ lineHeight: 20 }}
+        >
+          The web preview can&apos;t access the device database. Run{' '}
+          <Text className="font-sans-semibold">pnpm ios</Text> or{' '}
+          <Text className="font-sans-semibold">pnpm android</Text> for the
+          full experience.
+        </Text>
+        <Text className="mt-4 text-center font-sans text-[11px] text-slate-400">
+          (SharedArrayBuffer is unavailable — your browser is not in a
+          cross-origin-isolated context.)
+        </Text>
+      </View>
+    </View>
+  )
 }
 
 export default function RootLayout() {
@@ -120,6 +158,14 @@ export default function RootLayout() {
 
   if (!bootReady || !fontsLoaded) return null
 
+  // expo-sqlite's web build (wa-sqlite) requires SharedArrayBuffer, which
+  // is only available when the page is cross-origin isolated (COOP + COEP
+  // headers). On web we check this up-front and render a friendly fallback
+  // instead of crashing inside the SQLiteProvider on the first read.
+  if (Platform.OS === 'web' && !isWebSqliteAvailable()) {
+    return <WebUnsupportedFallback />
+  }
+
   return (
     <SQLiteProvider databaseName="healthos.db">
       <MigrationGate>
@@ -129,4 +175,20 @@ export default function RootLayout() {
       </MigrationGate>
     </SQLiteProvider>
   )
+}
+
+/**
+ * Best-effort check for whether wa-sqlite can run in this browser.
+ * SharedArrayBuffer is only defined in cross-origin-isolated contexts.
+ */
+function isWebSqliteAvailable(): boolean {
+  if (typeof globalThis === 'undefined') return false
+  // crossOriginIsolated is the canonical signal — true only when the
+  // page was served with COOP: same-origin + COEP: require-corp.
+  const coi = (globalThis as { crossOriginIsolated?: boolean })
+    .crossOriginIsolated
+  if (coi === false) return false
+  // Belt-and-braces: SharedArrayBuffer must actually exist.
+  return typeof (globalThis as { SharedArrayBuffer?: unknown })
+    .SharedArrayBuffer !== 'undefined'
 }
