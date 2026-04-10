@@ -22,6 +22,7 @@ import { useForm, Controller, type Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { LinearGradient } from 'expo-linear-gradient'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { Ionicons } from '@expo/vector-icons'
 import { Button } from '@components/ui/button'
 import { Input } from '@components/ui/input'
 import { calculateBMR } from '@/lib/formulas/tdee'
@@ -220,13 +221,13 @@ export function ProfileForm(): React.ReactElement {
                   name="sex"
                   render={({ field: { value, onChange } }) => (
                     <View className="flex-row rounded-full bg-slate-50 p-1">
-                      <PillSegment
-                        label="Male"
+                      <SexPill
+                        sex="male"
                         selected={value === 'male'}
                         onPress={() => onChange('male')}
                       />
-                      <PillSegment
-                        label="Female"
+                      <SexPill
+                        sex="female"
                         selected={value === 'female'}
                         onPress={() => onChange('female')}
                       />
@@ -386,6 +387,45 @@ function PillSegment({
       >
         {label}
       </Text>
+    </Pressable>
+  )
+}
+
+// ─────────────────────────────────────────────
+// Sex pill — icon-only variant for the cramped Age + Sex two-column row.
+// Uses Ionicons male/female symbols so the toggle never wraps on small
+// phones. The accessibility label still reads as "Male" / "Female" for
+// screen readers.
+// ─────────────────────────────────────────────
+
+interface SexPillProps {
+  sex: 'male' | 'female'
+  selected: boolean
+  onPress: () => void
+}
+
+function SexPill({
+  sex,
+  selected,
+  onPress,
+}: SexPillProps): React.ReactElement {
+  const label = sex === 'male' ? 'Male' : 'Female'
+  const iconName = sex === 'male' ? 'man' : 'woman'
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ selected }}
+      onPress={onPress}
+      className={`flex-1 items-center justify-center rounded-full py-3 active:opacity-80 ${
+        selected ? 'bg-mint-500' : 'bg-transparent'
+      }`}
+    >
+      <Ionicons
+        name={iconName}
+        size={22}
+        color={selected ? '#FFFFFF' : '#475569'}
+      />
     </Pressable>
   )
 }

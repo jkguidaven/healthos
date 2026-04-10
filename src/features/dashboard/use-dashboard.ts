@@ -24,7 +24,9 @@ import { getLatestBodyMetric } from '@db/queries/metrics'
 import { getTodayMacroSummary } from '@db/queries/food-log'
 import { getTodayWaterLog } from '@db/queries/water-log'
 import { getWeekSessionCount } from '@db/queries/workouts'
+import { calculateBMR, calculateTDEE } from '@/lib/formulas/tdee'
 import { useProfileStore } from '@/stores/profile-store'
+import type { MacroGoal } from '@/lib/formulas/macros'
 
 // ─────────────────────────────────────────────
 // Public shape returned by the hook.
@@ -42,6 +44,13 @@ export interface DashboardData {
   goalProteinG: number
   goalCarbsG: number
   goalFatG: number
+
+  // The user's goal phase (from profile.goal) and the maintenance TDEE
+  // computed live from their biometrics. The dashboard surfaces the
+  // delta (goalCalories - maintenanceTdee) so the user always knows
+  // whether they're in surplus / deficit / maintenance.
+  goal: MacroGoal | null
+  maintenanceTdee: number | null
 
   // Today's totals — all 0 until Phase 2 food query lands
   todayCalories: number
@@ -155,6 +164,8 @@ export function useDashboard(): UseDashboardResult {
               goalProteinG: 0,
               goalCarbsG: 0,
               goalFatG: 0,
+              goal: null,
+              maintenanceTdee: null,
               todayCalories: 0,
               todayProteinG: 0,
               todayCarbsG: 0,
@@ -171,6 +182,17 @@ export function useDashboard(): UseDashboardResult {
             setLoading(false)
             return
           }
+
+          // Compute the user's maintenance TDEE live from their biometrics
+          // so the dashboard can show the surplus/deficit delta against
+          // the saved goalCalories.
+          const bmr = calculateBMR({
+            sex: profile.sex,
+            age: profile.age,
+            heightCm: profile.heightCm,
+            weightKg: profile.weightKg,
+          })
+          const maintenanceTdee = calculateTDEE(bmr, profile.activityLevel)
 
           // Prime the Zustand store on first read this session.
           if (profileInStore == null) {
@@ -208,6 +230,8 @@ export function useDashboard(): UseDashboardResult {
             goalProteinG: profile.goalProteinG,
             goalCarbsG: profile.goalCarbsG,
             goalFatG: profile.goalFatG,
+            goal: profile.goal,
+            maintenanceTdee,
             todayCalories: macroSummary.calories,
             todayProteinG: macroSummary.proteinG,
             todayCarbsG: macroSummary.carbsG,

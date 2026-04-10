@@ -21,6 +21,7 @@ import React from 'react'
 import { Pressable, ScrollView, Text, View } from 'react-native'
 import { router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { Ionicons } from '@expo/vector-icons'
 import { MacroBar } from '@components/ui/macro-bar'
 import { useDashboard, type DashboardData } from './use-dashboard'
 
@@ -124,8 +125,16 @@ function DashboardContent({
           />
         </View>
 
+        {/* Surplus / deficit / maintenance status */}
+        {data.maintenanceTdee != null ? (
+          <CalorieGoalStatus
+            goalCalories={data.goalCalories}
+            maintenanceTdee={data.maintenanceTdee}
+          />
+        ) : null}
+
         {!hasAnyFoodLogged ? (
-          <View className="mt-5 rounded-2xl bg-mint-50 px-4 py-3">
+          <View className="mt-3 rounded-2xl bg-mint-50 px-4 py-3">
             <Text
               className="font-sans text-[12px] text-mint-700"
               style={{ lineHeight: 18 }}
@@ -304,6 +313,104 @@ function TopBar({
           </Text>
         </View>
       </Pressable>
+    </View>
+  )
+}
+
+// ─────────────────────────────────────────────
+// Calorie goal status pill — surfaces deficit / surplus / maintenance
+// so the user always knows whether they're eating above or below
+// maintenance for their current goal phase.
+// ─────────────────────────────────────────────
+
+interface CalorieGoalStatusProps {
+  goalCalories: number
+  maintenanceTdee: number
+}
+
+function CalorieGoalStatus({
+  goalCalories,
+  maintenanceTdee,
+}: CalorieGoalStatusProps): React.ReactElement {
+  const delta = goalCalories - maintenanceTdee
+  const isSurplus = delta > 0
+  const isDeficit = delta < 0
+
+  const bg = isSurplus
+    ? 'bg-mint-50'
+    : isDeficit
+      ? 'bg-amber-50'
+      : 'bg-slate-50'
+  const border = isSurplus
+    ? 'border-mint-100'
+    : isDeficit
+      ? 'border-amber-100'
+      : 'border-slate-100'
+  const numberColor = isSurplus
+    ? 'text-mint-700'
+    : isDeficit
+      ? 'text-amber-800'
+      : 'text-slate-700'
+  const iconBg = isSurplus
+    ? 'bg-mint-100'
+    : isDeficit
+      ? 'bg-amber-100'
+      : 'bg-slate-100'
+  const iconName = isSurplus
+    ? 'trending-up'
+    : isDeficit
+      ? 'trending-down'
+      : 'remove'
+  const iconColor = isSurplus ? '#15805F' : isDeficit ? '#92400E' : '#475569'
+
+  const phaseLabel = isSurplus
+    ? 'Calorie surplus'
+    : isDeficit
+      ? 'Calorie deficit'
+      : 'Maintenance'
+  const phaseSubtitle = isSurplus
+    ? 'Fueling muscle growth'
+    : isDeficit
+      ? 'Burning fat'
+      : 'Holding steady — recomp'
+  const deltaLabel = isSurplus
+    ? `+${delta.toLocaleString()}`
+    : isDeficit
+      ? delta.toLocaleString()
+      : '0'
+
+  return (
+    <View className={`mt-5 rounded-2xl border ${border} ${bg} p-4`}>
+      <View className="flex-row items-center gap-3">
+        <View
+          className={`h-11 w-11 items-center justify-center rounded-full ${iconBg}`}
+        >
+          <Ionicons name={iconName} size={22} color={iconColor} />
+        </View>
+        <View className="flex-1">
+          <Text className="font-sans-semibold text-[13px] text-slate-700">
+            {phaseLabel}
+          </Text>
+          <Text className="font-sans text-[11px] text-slate-500">
+            {phaseSubtitle}
+          </Text>
+        </View>
+        <View className="items-end">
+          <Text
+            className={`font-sans-bold text-[22px] ${numberColor}`}
+            style={{ letterSpacing: -0.5 }}
+          >
+            {deltaLabel}
+          </Text>
+          <Text className="font-sans text-[10px] text-slate-500">
+            kcal / day
+          </Text>
+        </View>
+      </View>
+      <Text className="mt-3 font-sans text-[11px] text-slate-500">
+        Maintenance ≈ {maintenanceTdee.toLocaleString()} kcal · Target{' '}
+        {goalCalories.toLocaleString()} kcal
+      </Text>
     </View>
   )
 }

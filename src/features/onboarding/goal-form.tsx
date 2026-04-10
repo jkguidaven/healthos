@@ -20,6 +20,7 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useSQLiteContext } from 'expo-sqlite'
 import { drizzle } from 'drizzle-orm/expo-sqlite'
+import { Ionicons } from '@expo/vector-icons'
 import { Button } from '@components/ui/button'
 import * as schema from '@/lib/db/schema'
 import { upsertProfile } from '@/lib/db/queries/profile'
@@ -325,45 +326,12 @@ export function GoalForm(): React.ReactElement {
 
           {/* === LIVE RESULT CARD === */}
           {liveResult ? (
-            <View
-              className="mt-4 rounded-3xl bg-white p-5"
-              style={MINT_CARD_SHADOW}
-            >
-              <View className="flex-row">
-                <View className="flex-1">
-                  <Text className="font-sans text-[12px] text-slate-500">
-                    Daily energy
-                  </Text>
-                  <View className="mt-1 flex-row items-baseline">
-                    <Text
-                      className="font-sans-bold text-[28px] text-slate-900"
-                      style={{ letterSpacing: -0.5 }}
-                    >
-                      {liveResult.tdee.toLocaleString()}
-                    </Text>
-                    <Text className="font-sans-medium text-[14px] text-slate-600 ml-1">
-                      kcal
-                    </Text>
-                  </View>
-                </View>
-                <View className="flex-1">
-                  <Text className="font-sans text-[12px] text-slate-500">
-                    Protein target
-                  </Text>
-                  <View className="mt-1 flex-row items-baseline">
-                    <Text
-                      className="font-sans-bold text-[28px] text-mint-600"
-                      style={{ letterSpacing: -0.5 }}
-                    >
-                      {liveResult.macros.proteinG}
-                    </Text>
-                    <Text className="font-sans-medium text-[14px] text-slate-600 ml-1">
-                      g / day
-                    </Text>
-                  </View>
-                </View>
-              </View>
-            </View>
+            <CalorieGoalResultCard
+              tdee={liveResult.tdee}
+              calories={liveResult.macros.calories}
+              proteinG={liveResult.macros.proteinG}
+              goal={goal}
+            />
           ) : null}
 
           {/* === CTA === */}
@@ -381,6 +349,171 @@ export function GoalForm(): React.ReactElement {
           </View>
         </ScrollView>
       </SafeAreaView>
+    </View>
+  )
+}
+
+// ─────────────────────────────────────────────
+// Live result card — daily calorie + protein targets, with a big
+// motivating surplus / deficit / maintenance hero block and a small
+// note explaining why protein is bumped on a cut.
+// ─────────────────────────────────────────────
+
+interface CalorieGoalResultCardProps {
+  tdee: number
+  calories: number
+  proteinG: number
+  goal: MacroGoal
+}
+
+function CalorieGoalResultCard({
+  tdee,
+  calories,
+  proteinG,
+  goal,
+}: CalorieGoalResultCardProps): React.ReactElement {
+  const delta = calories - tdee
+  const isSurplus = delta > 0
+  const isDeficit = delta < 0
+  const isCut = goal === 'cut'
+
+  // Hero block colors + copy per phase
+  const heroBg = isSurplus
+    ? 'bg-mint-50'
+    : isDeficit
+      ? 'bg-amber-50'
+      : 'bg-slate-50'
+  const heroBorder = isSurplus
+    ? 'border-mint-100'
+    : isDeficit
+      ? 'border-amber-100'
+      : 'border-slate-100'
+  const heroNumberColor = isSurplus
+    ? 'text-mint-700'
+    : isDeficit
+      ? 'text-amber-800'
+      : 'text-slate-700'
+  const iconName = isSurplus
+    ? 'trending-up'
+    : isDeficit
+      ? 'trending-down'
+      : 'remove'
+  const iconColor = isSurplus ? '#15805F' : isDeficit ? '#92400E' : '#475569'
+  const iconBg = isSurplus
+    ? 'bg-mint-100'
+    : isDeficit
+      ? 'bg-amber-100'
+      : 'bg-slate-100'
+
+  const phaseLabel = isSurplus
+    ? 'Calorie surplus'
+    : isDeficit
+      ? 'Calorie deficit'
+      : 'Maintenance'
+
+  const phaseSubtitle = isSurplus
+    ? 'Fueling muscle growth'
+    : isDeficit
+      ? 'Burning fat'
+      : 'Holding steady — recomp territory'
+
+  const deltaLabel = isSurplus
+    ? `+${delta.toLocaleString()}`
+    : isDeficit
+      ? delta.toLocaleString()
+      : '0'
+
+  return (
+    <View
+      className="mt-4 rounded-3xl bg-white p-5"
+      style={MINT_CARD_SHADOW}
+    >
+      {/* === Hero deficit / surplus block === */}
+      <View className={`rounded-2xl border ${heroBorder} ${heroBg} p-4`}>
+        <View className="flex-row items-center gap-3">
+          <View className={`h-11 w-11 items-center justify-center rounded-full ${iconBg}`}>
+            <Ionicons name={iconName} size={22} color={iconColor} />
+          </View>
+          <View className="flex-1">
+            <Text className="font-sans-semibold text-[13px] text-slate-700">
+              {phaseLabel}
+            </Text>
+            <Text className="font-sans text-[11px] text-slate-500">
+              {phaseSubtitle}
+            </Text>
+          </View>
+          <View className="items-end">
+            <Text
+              className={`font-sans-bold text-[24px] ${heroNumberColor}`}
+              style={{ letterSpacing: -0.5 }}
+            >
+              {deltaLabel}
+            </Text>
+            <Text className="font-sans text-[10px] text-slate-500">
+              kcal / day
+            </Text>
+          </View>
+        </View>
+        <Text className="mt-3 font-sans text-[11px] text-slate-500">
+          Maintenance ≈ {tdee.toLocaleString()} kcal · You&apos;ll eat{' '}
+          {calories.toLocaleString()} kcal
+        </Text>
+      </View>
+
+      {/* === Daily targets === */}
+      <View className="mt-5 flex-row">
+        <View className="flex-1">
+          <Text className="font-sans text-[12px] text-slate-500">
+            Daily target
+          </Text>
+          <View className="mt-1 flex-row items-baseline">
+            <Text
+              className="font-sans-bold text-[28px] text-slate-900"
+              style={{ letterSpacing: -0.5 }}
+            >
+              {calories.toLocaleString()}
+            </Text>
+            <Text className="ml-1 font-sans-medium text-[14px] text-slate-600">
+              kcal
+            </Text>
+          </View>
+        </View>
+        <View className="flex-1">
+          <Text className="font-sans text-[12px] text-slate-500">
+            Protein target
+          </Text>
+          <View className="mt-1 flex-row items-baseline">
+            <Text
+              className="font-sans-bold text-[28px] text-mint-600"
+              style={{ letterSpacing: -0.5 }}
+            >
+              {proteinG}
+            </Text>
+            <Text className="ml-1 font-sans-medium text-[14px] text-slate-600">
+              g / day
+            </Text>
+          </View>
+        </View>
+      </View>
+
+      {/* Why protein is higher on a cut — sports science explanation */}
+      {isCut ? (
+        <View className="mt-3 flex-row items-start gap-2 rounded-2xl bg-mint-50 px-3 py-2.5">
+          <Ionicons
+            name="information-circle"
+            size={16}
+            color="#15805F"
+            style={{ marginTop: 1 }}
+          />
+          <Text
+            className="flex-1 font-sans text-[11px] text-mint-700"
+            style={{ lineHeight: 16 }}
+          >
+            Protein is bumped slightly on a cut to preserve lean muscle while
+            you lose fat — backed by sports nutrition research.
+          </Text>
+        </View>
+      ) : null}
     </View>
   )
 }
