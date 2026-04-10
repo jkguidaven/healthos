@@ -14,6 +14,8 @@ import {
 } from '@expo-google-fonts/poppins'
 import migration0000 from '../src/lib/db/migrations/0000_handy_lucky_pierre.sql'
 import { hydrateApiKeyStatus } from '../src/lib/ai/api-key'
+import { scheduleAllReminders } from '../src/lib/notifications/notifications'
+import { useNotificationsStore } from '../src/stores/notifications-store'
 
 SplashScreen.preventAutoHideAsync()
 
@@ -58,6 +60,28 @@ async function runMigrations(db: SQLiteDatabase): Promise<void> {
     await db.execAsync(cleaned)
     await db.runAsync('INSERT INTO _migrations (tag, applied_at) VALUES (?, ?)', m.tag, Date.now())
   }
+}
+
+/**
+ * Re-syncs the local notification schedule with the user's saved
+ * `enabled` flag on every boot. The OS can clear scheduled
+ * notifications across reboots/updates, so we re-arm them here if
+ * the user previously opted in. Web is a no-op because
+ * `expo-notifications` is not supported there — guarding at this
+ * level keeps the web build from crashing at startup.
+ */
+function NotificationsBootSync(): null {
+  const enabled = useNotificationsStore((state) => state.enabled)
+
+  useEffect(() => {
+    if (Platform.OS === 'web') return
+    if (!enabled) return
+    scheduleAllReminders().catch((e) => {
+      console.warn('[NotificationsBootSync] reschedule failed:', e)
+    })
+  }, [enabled])
+
+  return null
 }
 
 function MigrationGate({ children }: { children: React.ReactNode }) {
@@ -170,6 +194,7 @@ export default function RootLayout() {
     <SQLiteProvider databaseName="healthos.db">
       <MigrationGate>
         <QueryClientProvider client={queryClient}>
+          <NotificationsBootSync />
           <Stack screenOptions={{ headerShown: false }} />
         </QueryClientProvider>
       </MigrationGate>
