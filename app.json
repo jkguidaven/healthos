@@ -26,6 +26,8 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "scheme": "healthos",
+    "plugins": ["expo-router"]
   }
 }
