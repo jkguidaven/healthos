@@ -576,10 +576,20 @@ function RecompSignalCard({
   data,
   loading,
 }: RecompSignalCardProps): React.ReactElement {
-  const message =
-    !loading && data.recompSignal
-      ? data.recompSignal.message
-      : 'Log a weigh-in and a tape measurement to see your recomp signal.'
+  // Three honest states:
+  //   - Computed signal → show it.
+  //   - 1 entry → "we'll start computing once you log a second check-in".
+  //   - 0 entries → "log your first check-in".
+  // The original copy ("log a weigh-in and a tape measurement") implied
+  // a single log was enough — it isn't, the signal needs comparative data
+  // over time, so the empty states now make that explicit.
+  const message = !loading && data.recompSignal
+    ? data.recompSignal.message
+    : data.entryCount === 0
+    ? 'Log your first check-in to start tracking your recomp signal.'
+    : data.entryCount === 1
+    ? 'Nice — first entry logged. We’ll start computing your recomp signal once you log a second check-in.'
+    : 'Not enough variation yet — keep logging and your recomp signal will sharpen.'
 
   // Per the wireframes (Tab 4 §5) the recomp signal lives on an amber
   // surface so it stands out from the surrounding mint cards as the

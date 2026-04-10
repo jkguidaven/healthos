@@ -20,7 +20,7 @@ import type { BodyMetric } from '@db/schema'
 import {
   getLatestBodyMetric,
   getBodyMetricsRange,
-  getBodyMetricNDaysAgo,
+  getOldestBodyMetricWithinDays,
 } from '@db/queries/metrics'
 import { useProfileStore } from '@/stores/profile-store'
 import {
@@ -37,6 +37,13 @@ export interface MetricsData {
   latest: BodyMetric | null
   /** 30-day window of body metrics, ordered oldest-first (chart-friendly). */
   thirtyDayTrend: BodyMetric[]
+  /**
+   * Total number of body_metric rows the user has ever logged. The
+   * recomp signal card uses this to distinguish "no data" from "one
+   * data point" so the empty-state copy can be honest about what's
+   * still missing.
+   */
+  entryCount: number
   /** Latest weight minus weight from 7 days ago. `null` if insufficient data. */
   weightDeltaWeek: number | null
   /** Latest weight minus weight from 30 days ago. `null` if insufficient data. */
@@ -71,6 +78,7 @@ function daysAgoIso(days: number): string {
 const EMPTY_METRICS: MetricsData = {
   latest: null,
   thirtyDayTrend: [],
+  entryCount: 0,
   weightDeltaWeek: null,
   weightDeltaMonth: null,
   bodyFatDeltaMonth: null,
@@ -110,11 +118,15 @@ export function useMetrics(): UseMetricsResult {
       const todayIso = toIsoDate(new Date())
       const fromIso = daysAgoIso(30)
 
+      // The week/month references are ROLLING — find the oldest body
+      // metric in the past 7 / 30 days, not "exactly N days ago". This
+      // means the recomp signal kicks in as soon as the user has 2+
+      // entries instead of waiting for an entry exactly 7 days old.
       const [latest, trend, weekRef, monthRef] = await Promise.all([
         getLatestBodyMetric(db, profileId),
         getBodyMetricsRange(db, profileId, fromIso, todayIso),
-        getBodyMetricNDaysAgo(db, profileId, 7),
-        getBodyMetricNDaysAgo(db, profileId, 30),
+        getOldestBodyMetricWithinDays(db, profileId, 7),
+        getOldestBodyMetricWithinDays(db, profileId, 30),
       ])
 
       if (cancelled) return
@@ -176,6 +188,11 @@ export function useMetrics(): UseMetricsResult {
       setData({
         latest,
         thirtyDayTrend: trend,
+        // The 30-day trend is the longest window we pull, so its row
+        // count is the cleanest "how much history does the user have"
+        // approximation without an extra round-trip. Within a 30-day
+        // window this is exact for almost every active user.
+        entryCount: trend.length,
         weightDeltaWeek,
         weightDeltaMonth,
         bodyFatDeltaMonth,

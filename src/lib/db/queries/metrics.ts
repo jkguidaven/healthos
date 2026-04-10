@@ -161,3 +161,35 @@ export async function getLatestBodyMetricWithinDays(
     .limit(1)
   return rows[0] ?? null
 }
+
+/**
+ * Get the OLDEST body metric within the last N days for a profile.
+ * Used by the metrics screen as a rolling baseline for week/month
+ * deltas — returns the earliest data point in the window so the
+ * recomp signal can compute as soon as the user has 2+ entries
+ * (rather than requiring an entry exactly N days old).
+ *
+ * Returns null if no entry exists in the window.
+ */
+export async function getOldestBodyMetricWithinDays(
+  db: DB,
+  profileId: number,
+  withinDays: number,
+): Promise<BodyMetric | null> {
+  const fromDate = new Date()
+  fromDate.setDate(fromDate.getDate() - withinDays)
+  const fromIso = fromDate.toISOString().split('T')[0]
+
+  const rows = await db
+    .select()
+    .from(bodyMetricTable)
+    .where(
+      and(
+        eq(bodyMetricTable.profileId, profileId),
+        gte(bodyMetricTable.date, fromIso),
+      ),
+    )
+    .orderBy(bodyMetricTable.date) // oldest first
+    .limit(1)
+  return rows[0] ?? null
+}
