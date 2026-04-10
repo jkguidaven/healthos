@@ -18,13 +18,18 @@
  * No raw SQL, no `any`, no direct `fetch()`.
  */
 
-import { useCallback, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSQLiteContext } from 'expo-sqlite'
 import { drizzle } from 'drizzle-orm/expo-sqlite'
 
 import * as schema from '@db/schema'
-import type { NewFoodLogEntry } from '@db/schema'
-import { insertFoodLogEntry } from '@db/queries/food-log'
+import type { FoodLogEntry, NewFoodLogEntry } from '@db/schema'
+import {
+  deleteFoodLogEntry as deleteFoodLogEntryQuery,
+  getFoodLogEntry,
+  insertFoodLogEntry,
+  updateFoodLogEntry,
+} from '@db/queries/food-log'
 import { useProfileStore } from '@/stores/profile-store'
 
 import type { ManualFoodValues, Meal } from './manual-food-form'
@@ -38,7 +43,7 @@ export interface UseSaveManualFoodResult {
 }
 
 // ─────────────────────────────────────────────
-// Hook
+// Create hook
 // ─────────────────────────────────────────────
 
 export function useSaveManualFood(): UseSaveManualFoodResult {
@@ -72,6 +77,86 @@ export function useSaveManualFood(): UseSaveManualFoodResult {
   )
 
   return { save }
+}
+
+// ─────────────────────────────────────────────
+// Edit hook — loads an existing entry, exposes update + delete
+// ─────────────────────────────────────────────
+
+export interface UseEditFoodLogResult {
+  /** The loaded entry, or null until the load completes / on failure. */
+  entry: FoodLogEntry | null
+  loading: boolean
+  loadError: Error | null
+  update: (values: ManualFoodValues) => Promise<void>
+  remove: () => Promise<void>
+}
+
+export function useEditFoodLog(id: number | null): UseEditFoodLogResult {
+  const sqlite = useSQLiteContext()
+  const db = useMemo(() => drizzle(sqlite, { schema }), [sqlite])
+
+  const [entry, setEntry] = useState<FoodLogEntry | null>(null)
+  const [loading, setLoading] = useState<boolean>(true)
+  const [loadError, setLoadError] = useState<Error | null>(null)
+
+  useEffect(() => {
+    if (id === null) {
+      setEntry(null)
+      setLoading(false)
+      return
+    }
+
+    let cancelled = false
+    setLoading(true)
+    setLoadError(null)
+    getFoodLogEntry(db, id)
+      .then((row) => {
+        if (cancelled) return
+        setEntry(row)
+        setLoading(false)
+      })
+      .catch((e) => {
+        if (cancelled) return
+        setLoadError(e instanceof Error ? e : new Error(String(e)))
+        setLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [db, id])
+
+  const update = useCallback<UseEditFoodLogResult['update']>(
+    async (values) => {
+      if (id === null || entry === null) {
+        throw new Error('Cannot update — no entry loaded.')
+      }
+      // Preserve fields the user didn't edit (date, source, confidence,
+      // aiNotes) — just overwrite the macros, name, and meal.
+      await updateFoodLogEntry(db, id, {
+        name: values.name.trim(),
+        meal: values.meal,
+        calories: values.calories,
+        proteinG: values.proteinG,
+        carbsG: values.carbsG,
+        fatG: values.fatG,
+      })
+    },
+    [db, id, entry],
+  )
+
+  const remove = useCallback<UseEditFoodLogResult['remove']>(
+    async () => {
+      if (id === null) {
+        throw new Error('Cannot delete — no entry loaded.')
+      }
+      await deleteFoodLogEntryQuery(db, id)
+    },
+    [db, id],
+  )
+
+  return { entry, loading, loadError, update, remove }
 }
 
 // ─────────────────────────────────────────────

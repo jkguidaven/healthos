@@ -56,6 +56,22 @@ export async function getTodayFoodLog(
 }
 
 /**
+ * Get a single food log entry by id. Returns null if it doesn't exist.
+ * Used by the edit form to pre-populate fields.
+ */
+export async function getFoodLogEntry(
+  db: DB,
+  id: number,
+): Promise<FoodLogEntry | null> {
+  const rows = await db
+    .select()
+    .from(foodLogTable)
+    .where(eq(foodLogTable.id, id))
+    .limit(1)
+  return rows[0] ?? null
+}
+
+/**
  * Insert a new food log entry. Returns the saved row with its id.
  */
 export async function insertFoodLogEntry(

@@ -105,9 +105,10 @@ export function NutritionScreen(): React.ReactElement {
   }, [])
 
   const handleEditEntry = useCallback((entry: FoodLogEntry): void => {
-    // Full edit modal is a future feature.
-    // eslint-disable-next-line no-console
-    console.log('edit', entry.id)
+    router.push({
+      pathname: '/(tabs)/food/manual',
+      params: { id: String(entry.id) },
+    })
   }, [])
 
   const handleDeleteEntry = useCallback(

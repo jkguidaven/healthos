@@ -17,9 +17,9 @@
  * No StyleSheet.create, no raw SQL, no `any`, no direct fetch.
  */
 
-import React, { useMemo, useState } from 'react'
-import { Pressable, ScrollView, Text, View } from 'react-native'
-import { router } from 'expo-router'
+import React, { useEffect, useMemo, useState } from 'react'
+import { Alert, Pressable, ScrollView, Text, View } from 'react-native'
+import { router, useLocalSearchParams } from 'expo-router'
 import { useForm, Controller, type Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { LinearGradient } from 'expo-linear-gradient'
@@ -29,7 +29,11 @@ import { z } from 'zod'
 import { Button } from '@components/ui/button'
 import { Input } from '@components/ui/input'
 
-import { defaultMealForNow, useSaveManualFood } from './use-manual-food'
+import {
+  defaultMealForNow,
+  useEditFoodLog,
+  useSaveManualFood,
+} from './use-manual-food'
 
 // ─────────────────────────────────────────────
 // Schema + types
@@ -106,7 +110,20 @@ const MEAL_OPTIONS: readonly MealOption[] = [
 // ─────────────────────────────────────────────
 
 export function ManualFoodForm(): React.ReactElement {
+  // The same screen handles both create and edit. Read `id` from the
+  // route params — when present, we're in edit mode.
+  const params = useLocalSearchParams<{ id?: string }>()
+  const editId = params.id ? Number(params.id) : null
+  const isEditMode = editId !== null && !Number.isNaN(editId)
+
   const { save } = useSaveManualFood()
+  const {
+    entry: existingEntry,
+    loading: loadingEntry,
+    update,
+    remove,
+  } = useEditFoodLog(isEditMode ? editId : null)
+
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -120,6 +137,7 @@ export function ManualFoodForm(): React.ReactElement {
   const {
     control,
     handleSubmit,
+    reset: resetForm,
     formState: { errors, isValid },
   } = useForm<ManualFoodFormInput, unknown, ManualFoodValues>({
     resolver,
@@ -127,11 +145,29 @@ export function ManualFoodForm(): React.ReactElement {
     mode: 'onChange',
   })
 
+  // When editing, prefill the form once the entry loads.
+  useEffect(() => {
+    if (existingEntry) {
+      resetForm({
+        name: existingEntry.name,
+        calories: String(existingEntry.calories),
+        proteinG: String(existingEntry.proteinG),
+        carbsG: String(existingEntry.carbsG),
+        fatG: String(existingEntry.fatG),
+        meal: existingEntry.meal as Meal,
+      })
+    }
+  }, [existingEntry, resetForm])
+
   const onSubmit = async (values: ManualFoodValues): Promise<void> => {
     setSubmitError(null)
     setIsSubmitting(true)
     try {
-      await save(values)
+      if (isEditMode) {
+        await update(values)
+      } else {
+        await save(values)
+      }
       router.back()
     } catch (err) {
       setSubmitError(
@@ -140,6 +176,32 @@ export function ManualFoodForm(): React.ReactElement {
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  const handleDelete = (): void => {
+    Alert.alert(
+      'Delete this entry?',
+      'This will remove the food log entry permanently.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await remove()
+              router.back()
+            } catch (err) {
+              setSubmitError(
+                err instanceof Error
+                  ? err.message
+                  : 'Could not delete entry',
+              )
+            }
+          },
+        },
+      ],
+    )
   }
 
   const handleBack = (): void => {
@@ -194,7 +256,7 @@ export function ManualFoodForm(): React.ReactElement {
               className="font-sans-semibold text-[18px] text-slate-900"
               style={{ letterSpacing: -0.2 }}
             >
-              Add manually
+              {isEditMode ? 'Edit entry' : 'Add manually'}
             </Text>
 
             {/* Spacer to balance the back button width. */}
@@ -207,13 +269,15 @@ export function ManualFoodForm(): React.ReactElement {
               className="font-sans-bold text-[28px] text-slate-900"
               style={{ lineHeight: 34, letterSpacing: -0.5 }}
             >
-              Log a meal
+              {isEditMode ? 'Update meal' : 'Log a meal'}
             </Text>
             <Text
               className="mt-2 font-sans text-[14px] text-slate-600"
               style={{ lineHeight: 20 }}
             >
-              Type in the macros for what you ate.
+              {isEditMode
+                ? 'Adjust the macros, name, or meal type.'
+                : 'Type in the macros for what you ate.'}
             </Text>
           </View>
 
@@ -345,11 +409,27 @@ export function ManualFoodForm(): React.ReactElement {
           <View className="mt-8">
             <Button
               onPress={handleSubmit(onSubmit)}
-              loading={isSubmitting}
-              disabled={isSubmitting || !isValid}
+              loading={isSubmitting || (isEditMode && loadingEntry)}
+              disabled={
+                isSubmitting || !isValid || (isEditMode && loadingEntry)
+              }
             >
-              Save entry
+              {isEditMode ? 'Save changes' : 'Save entry'}
             </Button>
+
+            {isEditMode ? (
+              <Pressable
+                onPress={handleDelete}
+                accessibilityRole="button"
+                accessibilityLabel="Delete this entry"
+                hitSlop={8}
+                className="mt-4 items-center active:opacity-60"
+              >
+                <Text className="font-sans-medium text-[13px] text-brand-coral">
+                  Delete entry
+                </Text>
+              </Pressable>
+            ) : null}
           </View>
         </ScrollView>
       </SafeAreaView>
