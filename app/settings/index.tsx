@@ -1,9 +1,3 @@
-import { View, Text } from 'react-native'
+import { SettingsScreen } from '@features/settings/settings-screen'
 
-export default function SettingsScreen() {
-  return (
-    <View className="flex-1 items-center justify-center bg-white">
-      <Text className="text-lg font-medium text-zinc-900">Settings</Text>
-    </View>
-  )
-}
+export default SettingsScreen

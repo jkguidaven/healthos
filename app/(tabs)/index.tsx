@@ -1,9 +1,1 @@
-import { View, Text } from 'react-native'
-
-export default function DashboardScreen() {
-  return (
-    <View className="flex-1 items-center justify-center bg-white">
-      <Text className="text-lg font-medium text-zinc-900">Dashboard</Text>
-    </View>
-  )
-}
+export { DashboardScreen as default } from '../../src/features/dashboard/dashboard-screen'
