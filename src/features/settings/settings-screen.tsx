@@ -25,6 +25,7 @@ import { router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { clearApiKey } from '@ai/api-key'
 import { useMaskedApiKey } from './use-api-key'
+import { useNotifications } from './use-notifications'
 
 type UnitPreference = 'metric' | 'imperial'
 
@@ -34,7 +35,11 @@ const APP_VERSION = 'v0.1'
 export function SettingsScreen(): React.ReactElement {
   const { masked, loading } = useMaskedApiKey()
   const [units, setUnits] = useState<UnitPreference>('metric')
-  const [notificationsOn, setNotificationsOn] = useState<boolean>(true)
+  const {
+    enabled: notificationsOn,
+    loading: notificationsLoading,
+    toggleEnabled: setNotificationsEnabled,
+  } = useNotifications()
 
   const handleBack = (): void => {
     router.back()
@@ -53,7 +58,7 @@ export function SettingsScreen(): React.ReactElement {
   }
 
   const handleToggleNotifications = (value: boolean): void => {
-    setNotificationsOn(value)
+    void setNotificationsEnabled(value)
   }
 
   const handleExport = (): void => {
@@ -172,6 +177,7 @@ export function SettingsScreen(): React.ReactElement {
                 <Switch
                   value={notificationsOn}
                   onValueChange={handleToggleNotifications}
+                  disabled={notificationsLoading}
                   trackColor={{ false: '#E2E8F0', true: '#7BDAB9' }}
                   thumbColor={notificationsOn ? '#1D9E75' : '#F8FAFC'}
                   ios_backgroundColor="#E2E8F0"
