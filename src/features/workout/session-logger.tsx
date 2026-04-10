@@ -47,6 +47,10 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 
 import { Button } from '@components/ui/button'
 import type { SessionSet } from '@db/schema'
+import {
+  getOverloadDeltaKg,
+  getTopSet,
+} from '@formulas/personal-record'
 import { useSession, type ExerciseWithSets } from './use-session'
 
 // ─────────────────────────────────────────────
@@ -62,7 +66,10 @@ const MINT_PILL_SHADOW = {
   elevation: 6,
 } as const
 
-// Hardcoded "current week" — tracked separately in #49 progressive overload.
+// Hardcoded "current week" — true week-tracking is left for the long-term
+// progression scheduling work. The session logger doesn't need it for the
+// progressive-overload comparisons (#49) — those go set-by-set against the
+// previous session for the same plan day, regardless of week index.
 const CURRENT_WEEK = 1
 
 // Minimum width for a set cell. Keeps a row of cells aligned even when a
@@ -392,6 +399,14 @@ function DoneExerciseCard({
 }: DoneExerciseCardProps): React.ReactElement {
   const hasPr = entry.loggedSets.some((s) => s.isPr)
 
+  // Compare today's best e1RM against last week's. We hide the badge for
+  // a flat session (delta === 0) — there's nothing to celebrate or warn
+  // about and the user already sees today's numbers in the grid above.
+  const overloadDelta = useMemo<number | null>(() => {
+    if (entry.lastSessionSets.length === 0) return null
+    return getOverloadDeltaKg(entry.loggedSets, entry.lastSessionSets)
+  }, [entry.loggedSets, entry.lastSessionSets])
+
   return (
     <View className="rounded-3xl border border-slate-100 bg-white p-5">
       <View className="flex-row items-start justify-between">
@@ -418,11 +433,31 @@ function DoneExerciseCard({
         <SetGrid entry={entry} activeSetIndex={null} />
       </View>
 
-      {hasPr ? (
-        <View className="mt-4 self-start rounded-full bg-mint-500 px-3 py-1">
-          <Text className="font-sans-semibold text-[10px] text-white">
-            + NEW PR
-          </Text>
+      {hasPr || (overloadDelta !== null && overloadDelta !== 0) ? (
+        <View className="mt-4 flex-row items-center gap-2">
+          {hasPr ? (
+            <View className="rounded-full bg-mint-500 px-3 py-1">
+              <Text className="font-sans-semibold text-[10px] text-white">
+                + NEW PR
+              </Text>
+            </View>
+          ) : null}
+          {overloadDelta !== null && overloadDelta !== 0 ? (
+            <View
+              className={`rounded-full px-3 py-1 ${
+                overloadDelta > 0 ? 'bg-mint-50' : 'bg-slate-100'
+              }`}
+            >
+              <Text
+                className={`font-sans-semibold text-[10px] ${
+                  overloadDelta > 0 ? 'text-mint-700' : 'text-slate-500'
+                }`}
+              >
+                {overloadDelta > 0 ? '+' : ''}
+                {overloadDelta.toFixed(1)}kg from last week
+              </Text>
+            </View>
+          ) : null}
         </View>
       ) : null}
     </View>
@@ -444,24 +479,33 @@ function ActiveExerciseCard({
   onLog,
   isLogging,
 }: ActiveExerciseCardProps): React.ReactElement {
-  const { exercise, loggedSets } = entry
+  const { exercise, loggedSets, lastSessionSets } = entry
   const nextSetIndex = loggedSets.length // 0-based index of the set to log
 
-  // Default the weight input to the plan's planned weight, or the weight
-  // of the most recent logged set — gives the user a sensible starting
-  // point they can tweak rather than typing from scratch every time.
+  // Headline set from last week — used both for the hint label and as
+  // a smarter default when the user has nothing logged yet today.
+  const lastWeekTopSet = useMemo(
+    () => getTopSet(lastSessionSets),
+    [lastSessionSets],
+  )
+
+  // Default the weight input to: the most recent set today → last week's
+  // top set → the plan's planned weight → empty. This gives the user a
+  // sensible starting point they can tweak rather than typing from scratch.
   const defaultWeight = useMemo<string>(() => {
     const last = loggedSets[loggedSets.length - 1]
     if (last?.weightKg != null) return String(last.weightKg)
+    if (lastWeekTopSet?.weightKg != null) return String(lastWeekTopSet.weightKg)
     if (exercise.weightKg != null) return String(exercise.weightKg)
     return ''
-  }, [exercise.weightKg, loggedSets])
+  }, [exercise.weightKg, loggedSets, lastWeekTopSet])
 
   const defaultReps = useMemo<string>(() => {
     const last = loggedSets[loggedSets.length - 1]
     if (last?.reps != null) return String(last.reps)
+    if (lastWeekTopSet?.reps != null) return String(lastWeekTopSet.reps)
     return String(exercise.reps)
-  }, [exercise.reps, loggedSets])
+  }, [exercise.reps, loggedSets, lastWeekTopSet])
 
   const [weight, setWeight] = useState<string>(defaultWeight)
   const [reps, setReps] = useState<string>(defaultReps)
@@ -527,6 +571,19 @@ function ActiveExerciseCard({
           </Text>
         </View>
       </View>
+
+      {lastWeekTopSet != null ? (
+        <View className="mt-4 self-start rounded-full bg-mint-50 px-3 py-1">
+          <Text className="font-sans-medium text-[11px] text-mint-700">
+            Last week:{' '}
+            {lastWeekTopSet.weightKg != null
+              ? `${formatWeight(lastWeekTopSet.weightKg)}kg \u00D7 ${
+                  lastWeekTopSet.reps ?? '?'
+                }`
+              : `${lastWeekTopSet.reps ?? '?'} reps`}
+          </Text>
+        </View>
+      ) : null}
 
       <View className="mt-5">
         <SetGrid entry={entry} activeSetIndex={nextSetIndex} />

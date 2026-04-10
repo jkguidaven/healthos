@@ -32,11 +32,13 @@ import type { PlanExercise, Session, SessionSet } from '@db/schema'
 import {
   completeSession,
   getActiveSession,
+  getLastSessionSetsByExercise,
   getPlanDayExercises,
   getSessionSets,
   logSet,
   startSession,
 } from '@db/queries/workouts'
+import { isPersonalRecord } from '@formulas/personal-record'
 import { useProfileStore } from '@/stores/profile-store'
 import { useSessionStore } from '@/stores/session-store'
 
@@ -48,6 +50,13 @@ export interface ExerciseWithSets {
   exercise: PlanExercise
   /** Sets logged so far for this exercise, ordered by `setNumber` ascending. */
   loggedSets: SessionSet[]
+  /**
+   * Sets the user logged for this exercise the LAST time they trained
+   * the same plan day. Empty when this is their first time hitting the
+   * exercise. Used by the UI for "Last week: 80kg × 8" hints and the
+   * "+2.5kg from last week" overload badge.
+   */
+  lastSessionSets: SessionSet[]
   /** Count of sets still to log (planned - logged, clamped at 0). */
   pendingCount: number
   /** True when `loggedSets.length >= exercise.sets`. */
@@ -114,11 +123,15 @@ const EMPTY_EXERCISES: ExerciseWithSets[] = []
 
 /**
  * Group logged sets by their `planExerciseId`, returning a new array of
- * `ExerciseWithSets` aligned with the planned exercises list.
+ * `ExerciseWithSets` aligned with the planned exercises list. The
+ * `lastSessionSetsByName` map is keyed by exercise name (rather than
+ * plan_exercise_id) so it survives plan-revision flows where a new
+ * row id may be issued for the same movement.
  */
 function buildExercisesWithSets(
   exercises: readonly PlanExercise[],
   allSets: readonly SessionSet[],
+  lastSessionSetsByName: ReadonlyMap<string, SessionSet[]>,
 ): ExerciseWithSets[] {
   const byExerciseId = new Map<number, SessionSet[]>()
   for (const set of allSets) {
@@ -143,6 +156,7 @@ function buildExercisesWithSets(
     return {
       exercise,
       loggedSets,
+      lastSessionSets: lastSessionSetsByName.get(exercise.name) ?? [],
       pendingCount,
       isComplete: loggedSets.length >= exercise.sets,
     }
@@ -174,6 +188,9 @@ export function useSession(): UseSessionReturn {
   const [session, setSession] = useState<Session | null>(null)
   const [exercises, setExercises] = useState<PlanExercise[]>([])
   const [loggedSets, setLoggedSets] = useState<SessionSet[]>([])
+  const [lastSessionByName, setLastSessionByName] = useState<
+    Map<string, SessionSet[]>
+  >(() => new Map())
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(0)
   const [loading, setLoading] = useState<boolean>(false)
   const [starting, setStarting] = useState<boolean>(false)
@@ -189,8 +206,8 @@ export function useSession(): UseSessionReturn {
 
   const exercisesWithSets = useMemo<ExerciseWithSets[]>(() => {
     if (exercises.length === 0) return EMPTY_EXERCISES
-    return buildExercisesWithSets(exercises, loggedSets)
-  }, [exercises, loggedSets])
+    return buildExercisesWithSets(exercises, loggedSets, lastSessionByName)
+  }, [exercises, loggedSets, lastSessionByName])
 
   const activeExerciseIndex = useMemo<number>(() => {
     const idx = exercisesWithSets.findIndex((e) => !e.isComplete)
@@ -291,6 +308,17 @@ export function useSession(): UseSessionReturn {
 
         const planExercises = await loadExercisesAndSets(dayId, active.id)
 
+        // Pull the previous session's sets so the UI can render
+        // "Last week: …" hints + overload badges. Excludes the active
+        // session itself so a resume doesn't compare against its own row.
+        const lastByName = await getLastSessionSetsByExercise(
+          db,
+          profileId,
+          dayId,
+          active.id,
+        )
+        setLastSessionByName(lastByName)
+
         if (planExercises.length === 0) {
           setError({
             kind: 'no-exercises',
@@ -339,12 +367,25 @@ export function useSession(): UseSessionReturn {
       setIsLogging(true)
       try {
         const nextSetIndex = activeEntry.loggedSets.length // 0-based
+
+        // Compare the candidate set against everything the user has
+        // already done for this exercise — both today's earlier sets and
+        // the previous session — and persist the PR flag if it beats
+        // their best e1RM. The first time the exercise is performed
+        // never counts as a PR (see formula).
+        const history = [
+          ...activeEntry.lastSessionSets,
+          ...activeEntry.loggedSets,
+        ]
+        const isPR = isPersonalRecord({ weightKg, reps }, history)
+
         await logSet(db, {
           sessionId: session.id,
           exerciseId: activeEntry.exercise.id,
           setIndex: nextSetIndex,
           weightKg,
           reps,
+          isPR,
         })
         // Re-fetch all sets for the session — cheap (dozens of rows at most)
         // and avoids having to stitch the new row into local state by hand.

@@ -413,11 +413,15 @@ export async function getSessionSets(
  * Get the last completed session for a specific plan day. Used by
  * progressive-overload tracking — compare current session against the
  * previous time the user did the same workout.
+ *
+ * `excludeSessionId` lets the active session itself be skipped when the
+ * caller is mid-session (otherwise it would always return its own row).
  */
 export async function getLastSessionForDay(
   db: DB,
   profileId: number,
   dayId: number,
+  excludeSessionId?: number,
 ): Promise<Session | null> {
   const rows = await db
     .select()
@@ -430,6 +434,48 @@ export async function getLastSessionForDay(
       ),
     )
     .orderBy(desc(sessionTable.date), desc(sessionTable.startedAt))
-    .limit(1)
-  return rows[0] ?? null
+    .limit(5)
+
+  for (const row of rows) {
+    if (excludeSessionId !== undefined && row.id === excludeSessionId) continue
+    return row
+  }
+  return null
+}
+
+/**
+ * Get every set logged in the previous session for a given plan day,
+ * grouped by exercise name. The set arrays are ordered oldest-first so
+ * `[0]` is the user's first working set, `[last]` is the heaviest top
+ * set in most progressions.
+ *
+ * Used by the active session logger for "Last week: 80kg × 8" hints
+ * and "+2.5kg from last week" overload badges. Returns an empty map
+ * when there is no previous session.
+ */
+export async function getLastSessionSetsByExercise(
+  db: DB,
+  profileId: number,
+  dayId: number,
+  excludeSessionId?: number,
+): Promise<Map<string, SessionSet[]>> {
+  const previous = await getLastSessionForDay(
+    db,
+    profileId,
+    dayId,
+    excludeSessionId,
+  )
+  if (!previous) return new Map()
+
+  const sets = await getSessionSets(db, previous.id)
+  const grouped = new Map<string, SessionSet[]>()
+  for (const set of sets) {
+    const list = grouped.get(set.exerciseName)
+    if (list) {
+      list.push(set)
+    } else {
+      grouped.set(set.exerciseName, [set])
+    }
+  }
+  return grouped
 }
