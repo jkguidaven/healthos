@@ -1,0 +1,21 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@db/*": ["src/lib/db/*"],
+      "@ai/*": ["src/lib/ai/*"],
+      "@formulas/*": ["src/lib/formulas/*"],
+      "@features/*": ["src/features/*"],
+      "@components/*": ["src/components/*"]
+    }
+  },
+  "exclude": [
+    "node_modules",
+    "canonical-feature-example.ts",
+    "infrastructure.ts",
+    "schema.ts"
+  ]
+}
