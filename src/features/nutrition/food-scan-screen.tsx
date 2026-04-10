@@ -18,13 +18,14 @@
  * gate) follows the mint/Poppins aesthetic.
  */
 
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ActivityIndicator,
   Animated,
   Linking,
   Platform,
   Pressable,
+  ScrollView,
   Text,
   View,
 } from 'react-native'
@@ -735,11 +736,25 @@ function friendlyScanErrorMessage(error: Error): {
         title: 'Couldn\u2019t read the response',
         body: 'Gemini returned something unexpected. Try another photo.',
       }
-    case 'api_error':
+    case 'api_error': {
+      const status = (error as { status?: number }).status
+      if (status === 503 || status === 502 || status === 504) {
+        return {
+          title: 'Gemini is busy',
+          body: 'Google\u2019s servers are overloaded right now. We retried a couple times — please wait a moment and try again.',
+        }
+      }
+      if (status && status >= 500) {
+        return {
+          title: 'Gemini server error',
+          body: `Google returned an error (HTTP ${status}). Try again in a moment.`,
+        }
+      }
       return {
         title: 'Scan failed',
         body: 'Something went wrong talking to Gemini. Check your connection and try again.',
       }
+    }
     case 'not_found':
       return {
         title: 'Product not found',
@@ -763,11 +778,27 @@ function ScanErrorOverlay({
   onDismiss,
 }: ScanErrorOverlayProps): React.ReactElement {
   const { title, body } = friendlyScanErrorMessage(error)
+  const [showDetails, setShowDetails] = useState(false)
+
+  // Some error classes carry extra debugging info on properties beyond .message
+  const debugDetails = useMemo(() => {
+    const parts: string[] = []
+    if (error.message) parts.push(`Message: ${error.message}`)
+    const code = (error as { code?: string }).code
+    if (code) parts.push(`Code: ${code}`)
+    // AIParseError stores the raw response text under .raw
+    const raw = (error as { raw?: string }).raw
+    if (raw) parts.push(`\nRaw response:\n${raw.slice(0, 800)}`)
+    // AIApiError stores the HTTP status under .status
+    const status = (error as { status?: number }).status
+    if (status) parts.push(`HTTP status: ${status}`)
+    return parts.join('\n')
+  }, [error])
 
   return (
     <View
       className="absolute left-6 right-6 items-center"
-      style={{ top: '35%' }}
+      style={{ top: '20%' }}
       pointerEvents="box-none"
     >
       <View
@@ -799,6 +830,32 @@ function ScanErrorOverlay({
         >
           {body}
         </Text>
+
+        {debugDetails ? (
+          <Pressable
+            onPress={() => setShowDetails((v) => !v)}
+            className="mt-3 self-center active:opacity-60"
+            hitSlop={8}
+          >
+            <Text className="font-sans-medium text-[12px] text-mint-600">
+              {showDetails ? 'Hide details' : 'Show details'}
+            </Text>
+          </Pressable>
+        ) : null}
+
+        {showDetails && debugDetails ? (
+          <View className="mt-3 max-h-60 rounded-2xl bg-slate-50 p-3">
+            <ScrollView>
+              <Text
+                className="font-sans text-[10px] text-slate-700"
+                selectable
+              >
+                {debugDetails}
+              </Text>
+            </ScrollView>
+          </View>
+        ) : null}
+
         <View className="mt-5">
           <Button onPress={onDismiss}>Try again</Button>
         </View>

@@ -22,6 +22,7 @@ import { drizzle } from 'drizzle-orm/expo-sqlite'
 import { callAI } from '@ai/ai-client'
 import {
   FOOD_SCAN_SYSTEM_PROMPT,
+  FoodScanGeminiSchema,
   FoodScanResultSchema,
   buildFoodScanParts,
   type FoodScanResult,
@@ -96,6 +97,7 @@ export function useFoodScanner(): UseFoodScannerReturn {
         system: FOOD_SCAN_SYSTEM_PROMPT,
         userMessage: buildFoodScanParts({ imageBase64, mimeType, mealContext }),
         schema: FoodScanResultSchema,
+        responseSchema: FoodScanGeminiSchema,
         maxTokens: 1024,
       })
     },
