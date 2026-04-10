@@ -105,6 +105,14 @@ export async function callAI<T>(params: CallAIParams<T>): Promise<T> {
     maxOutputTokens: params.maxTokens,
     // Gemini's structured-output mode — guarantees valid JSON
     responseMimeType: 'application/json',
+    // Gemini 2.5 Flash has "thinking mode" enabled by default — the model
+    // uses internal reasoning tokens BEFORE producing visible output, and
+    // those count against maxOutputTokens. For structured JSON output we
+    // don't need thinking; the schema does the heavy lifting. Disabling it
+    // gives the entire token budget back to the actual response.
+    thinkingConfig: {
+      thinkingBudget: 0,
+    },
   }
   if (params.responseSchema) {
     generationConfig.responseSchema = params.responseSchema
@@ -176,6 +184,7 @@ export async function callAI<T>(params: CallAIParams<T>): Promise<T> {
   // 5. Parse response
   const data: unknown = await response.json()
   const rawText: string = extractText(data)
+  const finishReason: string | null = extractFinishReason(data)
 
   if (rawText.length === 0) {
     console.warn('[callAI] Gemini response had no text content. Full response:', JSON.stringify(data).slice(0, 1500))
@@ -194,6 +203,14 @@ export async function callAI<T>(params: CallAIParams<T>): Promise<T> {
   try {
     parsed = JSON.parse(cleaned)
   } catch {
+    if (finishReason === 'MAX_TOKENS') {
+      console.warn(
+        '[callAI] Gemini hit MAX_TOKENS and the response was truncated mid-JSON. Increase maxTokens for this prompt.',
+      )
+      throw new AIParseError(
+        `Response truncated — Gemini hit maxTokens (${params.maxTokens}). Increase maxTokens for this prompt.`,
+      )
+    }
     console.warn('[callAI] Gemini returned non-JSON text:', cleaned.slice(0, 1000))
     throw new AIParseError(rawText)
   }
@@ -211,6 +228,39 @@ export async function callAI<T>(params: CallAIParams<T>): Promise<T> {
   }
 
   return result.data
+}
+
+/**
+ * Pull `candidates[0].finishReason` out of a Gemini response shape.
+ * Returns null if absent. Useful for distinguishing legitimate parse
+ * failures from "the model ran out of tokens mid-stream".
+ *
+ * Common values:
+ *   - STOP — model finished naturally
+ *   - MAX_TOKENS — hit the maxOutputTokens limit (response is truncated)
+ *   - SAFETY — blocked by safety filter
+ *   - RECITATION — blocked due to recitation
+ *   - OTHER — unspecified
+ */
+function extractFinishReason(data: unknown): string | null {
+  if (
+    typeof data !== 'object' ||
+    data === null ||
+    !('candidates' in data) ||
+    !Array.isArray((data as { candidates: unknown }).candidates)
+  ) {
+    return null
+  }
+  const first = (data as { candidates: unknown[] }).candidates[0]
+  if (
+    typeof first !== 'object' ||
+    first === null ||
+    !('finishReason' in first) ||
+    typeof (first as { finishReason: unknown }).finishReason !== 'string'
+  ) {
+    return null
+  }
+  return (first as { finishReason: string }).finishReason
 }
 
 // Safely pull the first text part out of a Gemini response shape

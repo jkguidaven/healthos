@@ -21,8 +21,9 @@ import {
   getActivePlan,
   getPlanDays,
   getPlanDayExercises,
+  getRecentSessions,
 } from '@db/queries/workouts'
-import type { PlanExercise, WorkoutDay, WorkoutPlan } from '@db/schema'
+import type { PlanExercise, Session, WorkoutDay, WorkoutPlan } from '@db/schema'
 import { useProfileStore } from '@/stores/profile-store'
 
 // ─────────────────────────────────────────────
@@ -39,6 +40,10 @@ export interface PlanDayWithExercises {
 export interface WorkoutPlanViewData {
   plan: WorkoutPlan | null
   days: PlanDayWithExercises[]
+  /** Completed sessions in the last 30 days, newest first. */
+  recentSessions: Session[]
+  /** Set of dayIds that the user has completed at least once in the last 7 days. */
+  recentlyCompletedDayIds: Set<number>
 }
 
 export interface UseWorkoutPlanViewResult {
@@ -69,6 +74,15 @@ export function parseMuscleGroups(raw: string): string[] {
 const EMPTY_DATA: WorkoutPlanViewData = {
   plan: null,
   days: [],
+  recentSessions: [],
+  recentlyCompletedDayIds: new Set(),
+}
+
+function isWithinDays(isoDate: string | null, days: number): boolean {
+  if (!isoDate) return false
+  const ts = Date.parse(isoDate)
+  if (Number.isNaN(ts)) return false
+  return Date.now() - ts < days * 24 * 60 * 60 * 1000
 }
 
 // ─────────────────────────────────────────────
@@ -95,11 +109,28 @@ export function useWorkoutPlanView(): UseWorkoutPlanViewResult {
       }
 
       try {
-        const plan = await getActivePlan(db, profileId)
+        const [plan, recentSessions] = await Promise.all([
+          getActivePlan(db, profileId),
+          getRecentSessions(db, profileId, 30),
+        ])
+
+        // Build the set of dayIds completed in the last 7 days for the
+        // "done this week" badge on the plan day cards.
+        const recentlyCompletedDayIds = new Set<number>()
+        for (const s of recentSessions) {
+          if (s.dayId != null && isWithinDays(s.completedAt, 7)) {
+            recentlyCompletedDayIds.add(s.dayId)
+          }
+        }
 
         if (plan == null) {
           if (cancelledRef.current) return
-          setData({ plan: null, days: [] })
+          setData({
+            plan: null,
+            days: [],
+            recentSessions,
+            recentlyCompletedDayIds,
+          })
           return
         }
 
@@ -118,7 +149,12 @@ export function useWorkoutPlanView(): UseWorkoutPlanViewResult {
         }
 
         if (cancelledRef.current) return
-        setData({ plan, days: daysWithExercises })
+        setData({
+          plan,
+          days: daysWithExercises,
+          recentSessions,
+          recentlyCompletedDayIds,
+        })
       } finally {
         if (!cancelledRef.current) setLoading(false)
       }

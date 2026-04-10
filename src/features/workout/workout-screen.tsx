@@ -31,7 +31,7 @@ import {
   type PlanDayWithExercises,
   type WorkoutPlanViewData,
 } from './use-workout-plan-view'
-import type { WorkoutPlan } from '@db/schema'
+import type { Session, WorkoutPlan } from '@db/schema'
 
 // ─────────────────────────────────────────────
 // Shared shadow tokens — tuned for mint-on-mint cards. Inlined here so
@@ -293,10 +293,18 @@ function PlanView({ data, onGenerate }: PlanViewProps): React.ReactElement {
             key={day.day.id}
             style={idx > 0 ? { marginTop: 12 } : undefined}
           >
-            <DayCard day={day} onBegin={handleBeginDay} />
+            <DayCard
+              day={day}
+              onBegin={handleBeginDay}
+              isDoneThisWeek={data.recentlyCompletedDayIds.has(day.day.id)}
+            />
           </View>
         ))}
       </View>
+
+      {data.recentSessions.length > 0 ? (
+        <RecentSessionsSection sessions={data.recentSessions} days={days} />
+      ) : null}
 
       <Pressable
         accessibilityRole="link"
@@ -414,9 +422,15 @@ const DAY_CARD_EXERCISE_PREVIEW = 4
 interface DayCardProps {
   day: PlanDayWithExercises
   onBegin: (dayId: number) => void
+  /** True if this dayId appears in the recently-completed set. */
+  isDoneThisWeek: boolean
 }
 
-function DayCard({ day, onBegin }: DayCardProps): React.ReactElement {
+function DayCard({
+  day,
+  onBegin,
+  isDoneThisWeek,
+}: DayCardProps): React.ReactElement {
   const muscleLabel = formatMuscleGroups(day.muscleGroups)
   const visibleExercises = day.exercises.slice(0, DAY_CARD_EXERCISE_PREVIEW)
   const hiddenCount = day.exercises.length - visibleExercises.length
@@ -429,12 +443,21 @@ function DayCard({ day, onBegin }: DayCardProps): React.ReactElement {
     <View className="rounded-3xl bg-white p-5" style={CARD_SHADOW}>
       <View className="flex-row items-start justify-between">
         <View className="flex-1 pr-3">
-          <Text
-            className="font-sans-semibold text-[16px] text-slate-900"
-            numberOfLines={1}
-          >
-            {day.day.dayName}
-          </Text>
+          <View className="flex-row items-center gap-2">
+            <Text
+              className="font-sans-semibold text-[16px] text-slate-900"
+              numberOfLines={1}
+            >
+              {day.day.dayName}
+            </Text>
+            {isDoneThisWeek ? (
+              <View className="rounded-full bg-mint-100 px-2 py-0.5">
+                <Text className="font-sans-semibold text-[10px] text-mint-700">
+                  ✓ Done
+                </Text>
+              </View>
+            ) : null}
+          </View>
           {muscleLabel.length > 0 ? (
             <Text
               className="mt-1 font-sans text-[12px] text-slate-500"
@@ -457,7 +480,8 @@ function DayCard({ day, onBegin }: DayCardProps): React.ReactElement {
             style={MINT_PILL_SHADOW}
           >
             <Text className="font-sans-semibold text-[12px] text-white">
-              Begin {'\u2192'}
+              {isDoneThisWeek ? 'Repeat ' : 'Begin '}
+              {'\u2192'}
             </Text>
           </View>
         </Pressable>
@@ -504,6 +528,85 @@ function DayCard({ day, onBegin }: DayCardProps): React.ReactElement {
       ) : null}
     </View>
   )
+}
+
+// ─────────────────────────────────────────────
+// Recent sessions — last N completed sessions, newest first.
+// Renders below the days list so the user has a visible record.
+// ─────────────────────────────────────────────
+
+interface RecentSessionsSectionProps {
+  sessions: Session[]
+  days: PlanDayWithExercises[]
+}
+
+const MAX_RECENT_SESSIONS_VISIBLE = 5
+
+function RecentSessionsSection({
+  sessions,
+  days,
+}: RecentSessionsSectionProps): React.ReactElement {
+  const visible = sessions.slice(0, MAX_RECENT_SESSIONS_VISIBLE)
+
+  return (
+    <View className="mt-8">
+      <Text className="mb-3 font-sans-semibold text-[14px] text-slate-700">
+        Recent sessions
+      </Text>
+      <View className="rounded-3xl bg-white p-2" style={CARD_SHADOW}>
+        {visible.map((session, idx) => {
+          const matchingDay = days.find((d) => d.day.id === session.dayId)
+          const dayName = matchingDay?.day.dayName ?? session.name ?? 'Workout'
+          return (
+            <View
+              key={session.id}
+              className="flex-row items-center justify-between px-3 py-3"
+              style={
+                idx > 0
+                  ? { borderTopWidth: 1, borderTopColor: '#F1F5F9' }
+                  : undefined
+              }
+            >
+              <View className="flex-row items-center gap-3">
+                <View className="h-8 w-8 items-center justify-center rounded-full bg-mint-100">
+                  <Text className="font-sans-bold text-[14px] text-mint-700">
+                    ✓
+                  </Text>
+                </View>
+                <View>
+                  <Text className="font-sans-semibold text-[14px] text-slate-900">
+                    {dayName}
+                  </Text>
+                  <Text className="font-sans text-[11px] text-slate-500">
+                    {formatRelativeDate(session.completedAt ?? session.date)}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          )
+        })}
+      </View>
+    </View>
+  )
+}
+
+function formatRelativeDate(iso: string | null): string {
+  if (!iso) return ''
+  const ts = Date.parse(iso)
+  if (Number.isNaN(ts)) return iso
+  const now = Date.now()
+  const diffMs = now - ts
+  const dayMs = 24 * 60 * 60 * 1000
+  const diffDays = Math.floor(diffMs / dayMs)
+  if (diffDays === 0) return 'Today'
+  if (diffDays === 1) return 'Yesterday'
+  if (diffDays < 7) return `${diffDays} days ago`
+  const date = new Date(ts)
+  return date.toLocaleDateString(undefined, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  })
 }
 
 // ─────────────────────────────────────────────

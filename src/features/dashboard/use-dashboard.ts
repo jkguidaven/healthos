@@ -23,6 +23,7 @@ import { getProfile } from '@db/queries/profile'
 import { getLatestBodyMetric } from '@db/queries/metrics'
 import { getTodayMacroSummary } from '@db/queries/food-log'
 import { getTodayWaterLog } from '@db/queries/water-log'
+import { getWeekSessionCount } from '@db/queries/workouts'
 import { useProfileStore } from '@/stores/profile-store'
 
 // ─────────────────────────────────────────────
@@ -190,10 +191,11 @@ export function useDashboard(): UseDashboardResult {
             })
           }
 
-          const [latestMetric, waterRow, macroSummary] = await Promise.all([
+          const [latestMetric, waterRow, macroSummary, weekWorkouts] = await Promise.all([
             getLatestBodyMetric(db, profile.id),
             getTodayWaterLog(db, profile.id),
             getTodayMacroSummary(db, profile.id),
+            getWeekSessionCount(db, profile.id),
           ])
 
           if (cancelled) return
@@ -211,7 +213,7 @@ export function useDashboard(): UseDashboardResult {
             todayCarbsG: macroSummary.carbsG,
             todayFatG: macroSummary.fatG,
             todayWeightKg: latestMetric?.weightKg ?? null,
-            workoutsThisWeek: 0,
+            workoutsThisWeek: weekWorkouts,
             workoutTarget: WORKOUT_TARGET_PER_WEEK,
             todayWaterMl: waterRow?.amountMl ?? 0,
             waterTarget: WATER_TARGET_ML,

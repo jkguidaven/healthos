@@ -244,6 +244,10 @@ function DashboardContent({
           label="Workouts"
           value={`${data.workoutsThisWeek}`}
           sublabel="this week"
+          onPress={() => {
+            router.push('/(tabs)/workout')
+          }}
+          accessibilityLabel="Open workout tab"
         />
         <View className="w-3" />
         <MiniStatCard
