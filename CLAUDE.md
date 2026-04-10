@@ -56,6 +56,7 @@ pnpm prompt:test food-scan / workout-plan / coach
 - NativeWind Tailwind classes only — no `StyleSheet.create()`
 - After schema changes: run `pnpm db:generate`, commit migration files
 - After prompt changes: run `pnpm prompt:test <feature>` before committing
+- **Platform guards for native-only APIs** — before using any `expo-*` or `react-native-*` API, verify it supports iOS, Android, AND web. If it doesn't (e.g. `expo-secure-store`, `expo-haptics`, `expo-notifications`, `expo-camera` web limits), wrap the call behind a `Platform.OS` branch with a working fallback for the unsupported platforms (e.g. `localStorage` for storage on web). Keep the platform branching inside the lowest-level wrapper module so feature code stays platform-agnostic. Past incident: `expo-secure-store` was called directly in `api-key.ts` and crashed the web build at boot with `ExpoSecureStore.default.getValueWithKeyAsync is not a function`.
 
 ## Ask first before
 

@@ -5,8 +5,8 @@
 // Anthropic API. All features call callClaude() — never fetch() directly.
 // ═══════════════════════════════════════════════════════════════
 
-import * as SecureStore from 'expo-secure-store'
 import { z } from 'zod'
+import { getApiKey } from './api-key'
 import {
   APIKeyMissingError,
   APIKeyInvalidError,
@@ -18,7 +18,6 @@ import {
 const API_URL = 'https://api.anthropic.com/v1/messages'
 const MODEL = 'claude-sonnet-4-6'
 const API_VERSION = '2023-06-01'
-const SECURE_KEY = 'anthropic_api_key'
 
 export type ContentBlock =
   | { type: 'text'; text: string }
@@ -35,8 +34,8 @@ export interface CallClaudeParams<T> {
 }
 
 export async function callClaude<T>(params: CallClaudeParams<T>): Promise<T> {
-  // 1. Read API key from SecureStore
-  const apiKey = await SecureStore.getItemAsync(SECURE_KEY)
+  // 1. Read API key (api-key.ts handles SecureStore vs web fallback)
+  const apiKey = await getApiKey()
   if (!apiKey) throw new APIKeyMissingError()
 
   // 2. Build content array

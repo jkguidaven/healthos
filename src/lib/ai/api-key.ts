@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 import * as SecureStore from 'expo-secure-store'
+import { Platform } from 'react-native'
 import { useUIStore } from '../../stores/ui-store'
 
 const SECURE_KEY = 'anthropic_api_key'
@@ -13,22 +14,48 @@ const TEST_URL = 'https://api.anthropic.com/v1/messages'
 const API_VERSION = '2023-06-01'
 const MODEL = 'claude-sonnet-4-6'
 
-export async function getApiKey(): Promise<string | null> {
+// expo-secure-store is not supported on web (it uses iOS Keychain / Android
+// Keystore). On web we fall back to localStorage so the dev experience works,
+// but production builds target iOS/Android where the secure enclave is used.
+const isWeb = Platform.OS === 'web'
+
+async function readKey(): Promise<string | null> {
+  if (isWeb) return globalThis.localStorage?.getItem(SECURE_KEY) ?? null
   return SecureStore.getItemAsync(SECURE_KEY)
 }
 
+async function writeKey(value: string): Promise<void> {
+  if (isWeb) {
+    globalThis.localStorage?.setItem(SECURE_KEY, value)
+    return
+  }
+  await SecureStore.setItemAsync(SECURE_KEY, value)
+}
+
+async function deleteKey(): Promise<void> {
+  if (isWeb) {
+    globalThis.localStorage?.removeItem(SECURE_KEY)
+    return
+  }
+  await SecureStore.deleteItemAsync(SECURE_KEY)
+}
+
+export async function getApiKey(): Promise<string | null> {
+  return readKey()
+}
+
 export async function saveApiKey(key: string): Promise<void> {
-  await SecureStore.setItemAsync(SECURE_KEY, key)
+  await writeKey(key)
   useUIStore.getState().setHasApiKey(true)
 }
 
 export async function clearApiKey(): Promise<void> {
-  await SecureStore.deleteItemAsync(SECURE_KEY)
+  await deleteKey()
   useUIStore.getState().setHasApiKey(false)
 }
 
 export async function hydrateApiKeyStatus(): Promise<void> {
-  const key = await SecureStore.getItemAsync(SECURE_KEY)
+  const key = await readKey()
   useUIStore.getState().setHasApiKey(!!key)
 }
 
