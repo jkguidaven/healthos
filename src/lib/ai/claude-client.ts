@@ -5,6 +5,7 @@
 // Anthropic API. All features call callClaude() — never fetch() directly.
 // ═══════════════════════════════════════════════════════════════
 
+import { Platform } from 'react-native'
 import { z } from 'zod'
 import { getApiKey } from './api-key'
 import {
@@ -18,6 +19,8 @@ import {
 const API_URL = 'https://api.anthropic.com/v1/messages'
 const MODEL = 'claude-sonnet-4-6'
 const API_VERSION = '2023-06-01'
+
+const isWeb = Platform.OS === 'web'
 
 export type ContentBlock =
   | { type: 'text'; text: string }
@@ -45,13 +48,20 @@ export async function callClaude<T>(params: CallClaudeParams<T>): Promise<T> {
       : params.userMessage
 
   // 3. Make the request
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'x-api-key': apiKey,
+    'anthropic-version': API_VERSION,
+  }
+  // Anthropic requires this opt-in header for direct browser calls (CORS).
+  // On native it's harmless.
+  if (isWeb) {
+    headers['anthropic-dangerous-direct-browser-access'] = 'true'
+  }
+
   const response = await fetch(API_URL, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': API_VERSION,
-    },
+    headers,
     body: JSON.stringify({
       model: MODEL,
       max_tokens: params.maxTokens,

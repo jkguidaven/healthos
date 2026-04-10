@@ -161,7 +161,7 @@ describe('ApiKeyStep', () => {
 
     fireEvent.press(getByText('Get a free key at console.anthropic.com →'))
 
-    expect(spy).toHaveBeenCalledWith('https://console.anthropic.com')
+    expect(spy).toHaveBeenCalledWith('https://console.anthropic.com/settings/keys')
     spy.mockRestore()
   })
 

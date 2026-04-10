@@ -8,15 +8,18 @@ import { Input } from '@components/ui/input'
 import { clearApiKey, saveApiKey, validateApiKey } from '@ai/api-key'
 
 type ValidationStatus = 'idle' | 'validating' | 'success' | 'error'
-type ErrorCode = 'invalid_key' | 'network_error' | 'rate_limit'
+type ErrorCode = 'invalid_key' | 'low_balance' | 'network_error' | 'rate_limit'
 
 const ERROR_MESSAGES: Record<ErrorCode, string> = {
   invalid_key: 'Key was rejected by Anthropic',
+  low_balance:
+    'Your key works, but your Anthropic account has no credits. Add some to start using AI features.',
   network_error: 'Check your connection and try again',
   rate_limit: 'Rate limit hit — try again in a moment',
 }
 
-const CONSOLE_URL = 'https://console.anthropic.com'
+const CONSOLE_URL = 'https://console.anthropic.com/settings/keys'
+const BILLING_URL = 'https://console.anthropic.com/settings/billing'
 
 const MINT_SHADOW = {
   shadowColor: '#1D9E75',
@@ -214,7 +217,27 @@ export function ApiKeyStep(): React.ReactElement {
             </View>
           ) : null}
 
-          {status === 'error' && errorCode ? (
+          {status === 'error' && errorCode === 'low_balance' ? (
+            <View className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+              <View className="flex-row items-start gap-3">
+                <View className="mt-1 h-2.5 w-2.5 rounded-full bg-amber-500" />
+                <Text className="flex-1 font-sans-medium text-[13px] text-amber-800">
+                  {ERROR_MESSAGES.low_balance}
+                </Text>
+              </View>
+              <Pressable
+                onPress={() => {
+                  void Linking.openURL(BILLING_URL)
+                }}
+                accessibilityRole="link"
+                className="mt-3 self-start rounded-full bg-amber-500 px-4 py-2 active:opacity-80"
+              >
+                <Text className="font-sans-semibold text-[12px] text-white">
+                  Open billing settings →
+                </Text>
+              </Pressable>
+            </View>
+          ) : status === 'error' && errorCode ? (
             <View className="mt-4 flex-row items-center gap-3 rounded-2xl border border-red-200 bg-red-50 p-4">
               <View className="h-2.5 w-2.5 rounded-full bg-red-500" />
               <Text className="flex-1 font-sans-medium text-[13px] text-red-700">

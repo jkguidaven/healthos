@@ -59,33 +59,76 @@ export async function hydrateApiKeyStatus(): Promise<void> {
   useUIStore.getState().setHasApiKey(!!key)
 }
 
+export type ValidationErrorCode =
+  | 'invalid_key'
+  | 'low_balance'
+  | 'network_error'
+  | 'rate_limit'
+
 export interface ValidationResult {
   valid: boolean
-  error?: 'invalid_key' | 'network_error' | 'rate_limit'
+  error?: ValidationErrorCode
+}
+
+interface AnthropicErrorBody {
+  type?: string
+  error?: { type?: string; message?: string }
+}
+
+function parseAnthropicError(text: string): AnthropicErrorBody | null {
+  try {
+    return JSON.parse(text) as AnthropicErrorBody
+  } catch {
+    return null
+  }
 }
 
 export async function validateApiKey(key: string): Promise<ValidationResult> {
   try {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'x-api-key': key,
+      'anthropic-version': API_VERSION,
+    }
+    // Anthropic requires an explicit opt-in header for direct browser calls
+    // (otherwise CORS preflight fails). On native this header is harmless.
+    if (isWeb) {
+      headers['anthropic-dangerous-direct-browser-access'] = 'true'
+    }
+
     const response = await fetch(TEST_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': key,
-        'anthropic-version': API_VERSION,
-      },
+      headers,
       body: JSON.stringify({
         model: MODEL,
-        max_tokens: 1,
+        max_tokens: 16,
         messages: [{ role: 'user', content: 'hi' }],
       }),
     })
 
     if (response.status === 401) return { valid: false, error: 'invalid_key' }
     if (response.status === 429) return { valid: false, error: 'rate_limit' }
-    // 400 = request shape rejected but the key itself was accepted by auth
-    if (response.ok || response.status === 400) return { valid: true }
+    if (response.ok) return { valid: true }
+
+    // Inspect the body to distinguish "auth passed but billing is dry" from
+    // a genuine bad request. Never log the key — only the response body,
+    // which never contains the key.
+    let detail = ''
+    try {
+      detail = await response.text()
+    } catch {
+      detail = `HTTP ${response.status}`
+    }
+    const parsed = parseAnthropicError(detail)
+    const message = parsed?.error?.message?.toLowerCase() ?? ''
+    if (message.includes('credit balance') || message.includes('low balance')) {
+      return { valid: false, error: 'low_balance' }
+    }
+
+    console.warn('[validateApiKey] Anthropic returned non-OK:', response.status, detail)
     return { valid: false, error: 'network_error' }
-  } catch {
+  } catch (e) {
+    console.warn('[validateApiKey] fetch threw:', e)
     return { valid: false, error: 'network_error' }
   }
 }
