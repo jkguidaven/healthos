@@ -1,13 +1,14 @@
 /**
  * src/features/metrics/body-fat-form.tsx
  *
- * Layer 4 — Body fat calculator screen.
+ * Layer 4 — Daily check-in screen (file kept for legacy route name).
  *
- * A focused detail screen (Expo Router presents it as a pushed route) where
- * the user enters waist + neck (+ hip for females) measurements. As they
- * type, the Navy body fat formula runs live and a hero result card reveals
- * itself. Saving upserts today's body_metric row and routes back to the
- * body tab.
+ * Originally a focused "body fat calculator" screen. The hook
+ * (`useBodyFat`) was later refactored to be the daily check-in flow:
+ * weight is required, waist/neck/hip are optional. This screen is now
+ * in sync with that — primary input is today's weight, body fat fields
+ * are presented as an optional second card with a live result preview
+ * that only appears when all inputs are filled.
  *
  * Visual language: flat white page surface + rounded-3xl white cards
  * separated by a subtle slate border + Poppins. Mint stays as an accent
@@ -33,8 +34,16 @@ import { useBodyFat } from './use-body-fat'
 
 export function BodyFatForm(): React.ReactElement | null {
   const profile = useProfileStore((s) => s.profile)
-  const { values, setField, liveResult, save, isSaving, saveSuccess, saveError } =
-    useBodyFat()
+  const {
+    values,
+    setField,
+    liveResult,
+    canSave,
+    save,
+    isSaving,
+    saveSuccess,
+    saveError,
+  } = useBodyFat()
 
   // Navigate back once the upsert resolves successfully.
   useEffect(() => {
@@ -78,7 +87,7 @@ export function BodyFatForm(): React.ReactElement | null {
             </Pressable>
 
             <Text className="font-sans-semibold text-[16px] text-slate-900">
-              Body fat
+              Daily check-in
             </Text>
 
             {/* Spacer to keep the title visually centered */}
@@ -91,18 +100,53 @@ export function BodyFatForm(): React.ReactElement | null {
               className="font-sans-bold text-[28px] text-slate-900"
               style={{ lineHeight: 34, letterSpacing: -0.5 }}
             >
-              How are you{'\n'}measuring up?
+              How’s today{'\n'}looking?
             </Text>
             <Text
               className="mt-3 font-sans text-[14px] text-slate-600"
               style={{ lineHeight: 20 }}
             >
-              US Navy method · takes 30 seconds.
+              Log today’s weigh-in. Tape measurements are optional —
+              add them when you’re tracking body fat too.
             </Text>
           </View>
 
-          {/* === FORM CARD === */}
+          {/* === REQUIRED: WEIGH-IN CARD === */}
           <View className="mt-7 rounded-3xl border border-slate-100 bg-white p-6">
+            <View className="mb-4 flex-row items-center justify-between">
+              <Text className="font-sans-semibold text-[13px] text-slate-500">
+                Weigh-in
+              </Text>
+              <View className="rounded-full bg-mint-100 px-2.5 py-0.5">
+                <Text className="font-sans-semibold text-[10px] text-mint-700">
+                  REQUIRED
+                </Text>
+              </View>
+            </View>
+            <Input
+              label="Weight (kg)"
+              value={values.weightKg}
+              onChangeText={(v) => setField('weightKg', v)}
+              placeholder="78.0"
+              keyboardType="decimal-pad"
+            />
+            <Text className="mt-2 font-sans text-[12px] text-slate-400">
+              Pre-filled with your last entry — tap to edit.
+            </Text>
+          </View>
+
+          {/* === OPTIONAL: BODY FAT CARD === */}
+          <View className="mt-4 rounded-3xl border border-slate-100 bg-white p-6">
+            <View className="mb-4 flex-row items-center justify-between">
+              <Text className="font-sans-semibold text-[13px] text-slate-500">
+                Body fat (US Navy method)
+              </Text>
+              <View className="rounded-full bg-slate-100 px-2.5 py-0.5">
+                <Text className="font-sans-semibold text-[10px] text-slate-500">
+                  OPTIONAL
+                </Text>
+              </View>
+            </View>
             <View className="gap-4">
               <Input
                 label="Waist (cm)"
@@ -250,9 +294,9 @@ export function BodyFatForm(): React.ReactElement | null {
               <Button
                 onPress={save}
                 loading={isSaving}
-                disabled={liveResult === null || isSaving}
+                disabled={!canSave || isSaving}
               >
-                Save to log
+                Save check-in
               </Button>
             </View>
           </View>

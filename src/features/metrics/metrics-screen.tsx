@@ -51,8 +51,8 @@ export function MetricsScreen(): React.ReactElement {
   const { data, loading } = useMetrics()
 
   const handleLogToday = (): void => {
-    // The body-fat modal is the closest existing logging surface. When the
-    // dedicated check-in modal ships (#TODO) the route below will change.
+    // The /body/body-fat route is the daily check-in screen — name is
+    // legacy from when it was a body-fat-only calculator.
     router.push('/(tabs)/body/body-fat')
   }
 
