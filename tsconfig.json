@@ -3,6 +3,8 @@
   "compilerOptions": {
     "strict": true,
     "baseUrl": ".",
+    "jsxImportSource": "nativewind",
+    "types": ["nativewind/types", "jest"],
     "paths": {
       "@/*": ["src/*"],
       "@db/*": ["src/lib/db/*"],
