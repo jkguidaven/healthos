@@ -18,11 +18,12 @@
  * shadow props inlined where NativeWind can't express them.
  */
 
-import React, { useMemo } from 'react'
+import React from 'react'
 import { Pressable, ScrollView, Text, View } from 'react-native'
 import { router } from 'expo-router'
 import { LinearGradient } from 'expo-linear-gradient'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { MacroBar } from '@components/ui/macro-bar'
 import { useDashboard, type DashboardData } from './use-dashboard'
 
 // ─────────────────────────────────────────────
@@ -53,14 +54,6 @@ const SOFT_CARD_SHADOW = {
   shadowOpacity: 0.08,
   shadowRadius: 14,
   elevation: 3,
-} as const
-
-// Macro colors — straight from the brand pillar palette. Used only as
-// data accents, never as UI chrome.
-const MACRO_COLORS = {
-  protein: '#534AB7', // brand-purple
-  carbs: '#1D9E75', // brand-green
-  fat: '#D85A30', // brand-coral
 } as const
 
 // ─────────────────────────────────────────────
@@ -128,16 +121,6 @@ interface DashboardContentProps {
 function DashboardContent({
   data,
 }: DashboardContentProps): React.ReactElement {
-  const macroTotals = useMemo(() => {
-    const total = data.todayProteinG + data.todayCarbsG + data.todayFatG
-    return {
-      total,
-      proteinPct: total > 0 ? data.todayProteinG / total : 0,
-      carbsPct: total > 0 ? data.todayCarbsG / total : 0,
-      fatPct: total > 0 ? data.todayFatG / total : 0,
-    }
-  }, [data.todayProteinG, data.todayCarbsG, data.todayFatG])
-
   const caloriesPct = clampPct(data.todayCalories, data.goalCalories)
   const proteinPct = clampPct(data.todayProteinG, data.goalProteinG)
 
@@ -215,48 +198,12 @@ function DashboardContent({
           Macro breakdown
         </Text>
 
-        <View className="mt-4 h-3 flex-row overflow-hidden rounded-full bg-mint-50">
-          {macroTotals.total > 0 ? (
-            <>
-              <View
-                style={{
-                  flex: macroTotals.proteinPct,
-                  backgroundColor: MACRO_COLORS.protein,
-                }}
-              />
-              <View
-                style={{
-                  flex: macroTotals.carbsPct,
-                  backgroundColor: MACRO_COLORS.carbs,
-                }}
-              />
-              <View
-                style={{
-                  flex: macroTotals.fatPct,
-                  backgroundColor: MACRO_COLORS.fat,
-                }}
-              />
-            </>
-          ) : (
-            <View className="flex-1 bg-mint-100" />
-          )}
-        </View>
-
-        <View className="mt-4 flex-row justify-between">
-          <MacroLegendItem
-            color={MACRO_COLORS.protein}
-            label="P"
-            grams={data.todayProteinG}
-          />
-          <MacroLegendItem
-            color={MACRO_COLORS.carbs}
-            label="C"
-            grams={data.todayCarbsG}
-          />
-          <MacroLegendItem
-            color={MACRO_COLORS.fat}
-            label="F"
-            grams={data.todayFatG}
+        <View className="mt-4">
+          <MacroBar
+            proteinG={data.todayProteinG}
+            carbsG={data.todayCarbsG}
+            fatG={data.todayFatG}
+            height={12}
           />
         </View>
       </View>
@@ -469,37 +416,6 @@ function HeroMetric({
           style={{ width: `${progressPct * 100}%` }}
         />
       </View>
-    </View>
-  )
-}
-
-// ─────────────────────────────────────────────
-// Macro legend pill (dot + letter + grams).
-// ─────────────────────────────────────────────
-
-interface MacroLegendItemProps {
-  color: string
-  label: string
-  grams: number
-}
-
-function MacroLegendItem({
-  color,
-  label,
-  grams,
-}: MacroLegendItemProps): React.ReactElement {
-  return (
-    <View className="flex-row items-center">
-      <View
-        className="h-2 w-2 rounded-full"
-        style={{ backgroundColor: color }}
-      />
-      <Text className="ml-2 font-sans-medium text-[12px] text-slate-600">
-        {label}
-      </Text>
-      <Text className="ml-1 font-sans-semibold text-[12px] text-slate-900">
-        {`${formatNumber(grams)}g`}
-      </Text>
     </View>
   )
 }
