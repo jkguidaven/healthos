@@ -20,11 +20,20 @@
  */
 
 import React, { useState } from 'react'
-import { Alert, Pressable, ScrollView, Switch, Text, View } from 'react-native'
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  Switch,
+  Text,
+  View,
+} from 'react-native'
 import { router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { clearApiKey } from '@ai/api-key'
 import { useMaskedApiKey } from './use-api-key'
+import { useDataExport } from './use-data-export'
 import { useNotifications } from './use-notifications'
 
 type UnitPreference = 'metric' | 'imperial'
@@ -34,6 +43,7 @@ const APP_VERSION = 'v0.1'
 
 export function SettingsScreen(): React.ReactElement {
   const { masked, loading } = useMaskedApiKey()
+  const { exportAll, isExporting, lastExportedAt } = useDataExport()
   const [units, setUnits] = useState<UnitPreference>('metric')
   const {
     enabled: notificationsOn,
@@ -62,10 +72,19 @@ export function SettingsScreen(): React.ReactElement {
   }
 
   const handleExport = (): void => {
-    // Full export lives in issue #9 — stub for now.
-    // eslint-disable-next-line no-console
-    console.log('export')
+    if (isExporting) return
+    void (async (): Promise<void> => {
+      try {
+        await exportAll()
+      } catch (e) {
+        const message =
+          e instanceof Error ? e.message : 'Could not export your data.'
+        Alert.alert('Export failed', message)
+      }
+    })()
   }
+
+  const exportSubtitle = describeExportStatus(isExporting, lastExportedAt)
 
   const handleRemoveKey = (): void => {
     Alert.alert(
@@ -191,8 +210,20 @@ export function SettingsScreen(): React.ReactElement {
           <Section title="Data">
             <Row
               label="Export all data"
-              right={<Chevron />}
+              subtitle={exportSubtitle}
               onPress={handleExport}
+              right={
+                isExporting ? (
+                  <View className="flex-row items-center">
+                    <ActivityIndicator size="small" color="#1D9E75" />
+                    <Text className="ml-2 font-sans-medium text-[13px] text-mint-600">
+                      Exporting…
+                    </Text>
+                  </View>
+                ) : (
+                  <Chevron />
+                )
+              }
             />
             <Row
               label="Remove API key"
@@ -245,6 +276,7 @@ interface RowProps {
   onPress?: () => void
   isLast?: boolean
   labelClassName?: string
+  subtitle?: string
 }
 
 function Row({
@@ -253,6 +285,7 @@ function Row({
   onPress,
   isLast = false,
   labelClassName,
+  subtitle,
 }: RowProps): React.ReactElement {
   const borderClass = isLast ? '' : 'border-b border-slate-100'
   const labelColorClass = labelClassName ?? 'text-slate-900'
@@ -261,11 +294,18 @@ function Row({
     <View
       className={`flex-row items-center justify-between py-4 ${borderClass}`}
     >
-      <Text
-        className={`font-sans-medium text-[14px] ${labelColorClass}`}
-      >
-        {label}
-      </Text>
+      <View className="flex-1 pr-4">
+        <Text
+          className={`font-sans-medium text-[14px] ${labelColorClass}`}
+        >
+          {label}
+        </Text>
+        {subtitle ? (
+          <Text className="mt-0.5 font-sans text-[12px] text-slate-500">
+            {subtitle}
+          </Text>
+        ) : null}
+      </View>
       <View className="flex-row items-center">{right}</View>
     </View>
   )
@@ -290,4 +330,45 @@ function Chevron(): React.ReactElement {
   return (
     <Text className="font-sans-medium text-[18px] text-slate-300">›</Text>
   )
+}
+
+// ─────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────
+
+const ONE_MINUTE_MS = 60 * 1_000
+const ONE_HOUR_MS = 60 * ONE_MINUTE_MS
+const ONE_DAY_MS = 24 * ONE_HOUR_MS
+
+/**
+ * Build the subtitle line under "Export all data".
+ *
+ * - Idle, never exported  → reassures the user nothing leaves the device.
+ * - Exporting             → mirrors the spinner so the row reads as busy.
+ * - Just finished (<1 min)→ "Just exported".
+ * - Recent (<1 h)         → "Last exported: N minutes ago".
+ * - Older                 → coarser "X hours / days ago".
+ */
+function describeExportStatus(
+  isExporting: boolean,
+  lastExportedAt: Date | null,
+): string {
+  if (isExporting) return 'Preparing your data…'
+  if (!lastExportedAt) return 'All data stays on your device'
+
+  const elapsedMs = Date.now() - lastExportedAt.getTime()
+  if (elapsedMs < ONE_MINUTE_MS) return 'Just exported'
+
+  if (elapsedMs < ONE_HOUR_MS) {
+    const minutes = Math.floor(elapsedMs / ONE_MINUTE_MS)
+    return `Last exported ${minutes} minute${minutes === 1 ? '' : 's'} ago`
+  }
+
+  if (elapsedMs < ONE_DAY_MS) {
+    const hours = Math.floor(elapsedMs / ONE_HOUR_MS)
+    return `Last exported ${hours} hour${hours === 1 ? '' : 's'} ago`
+  }
+
+  const days = Math.floor(elapsedMs / ONE_DAY_MS)
+  return `Last exported ${days} day${days === 1 ? '' : 's'} ago`
 }

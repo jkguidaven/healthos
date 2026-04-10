@@ -5,6 +5,12 @@ module.exports = {
     customExportConditions: ['node', 'node-addons'],
   },
   setupFilesAfterEnv: ['./src/test-utils/setup.ts'],
+  // Skip parallel-agent worktree directories so Jest doesn't pick up
+  // duplicate test files from .claude/worktrees/agent-*. Each worktree
+  // is a full repo checkout with its own node_modules and would otherwise
+  // multiply the test count by the number of in-flight worktrees.
+  testPathIgnorePatterns: ['/node_modules/', '/.claude/'],
+  modulePathIgnorePatterns: ['/.claude/'],
   transformIgnorePatterns: [
     // Jest evaluates this regex against every file path via `match()`; files
     // whose path matches are NOT transformed. We whitelist the React Native
