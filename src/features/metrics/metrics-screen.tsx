@@ -70,6 +70,11 @@ export function MetricsScreen(): React.ReactElement {
     console.log('photos')
   }
 
+  // Show a dedicated empty state when the user has zero body_metric
+  // entries — the dashed metric tiles aren't a great first impression
+  // and the recomp signal card is meaningless without data.
+  const hasNoEntries = !loading && data.entryCount === 0
+
   return (
     <View className="flex-1 bg-white">
       <SafeAreaView edges={['top']} className="flex-1">
@@ -83,6 +88,10 @@ export function MetricsScreen(): React.ReactElement {
         >
           {/* === TOP BAR === */}
           <TopBar onLogToday={handleLogToday} onEdit={handleEdit} />
+
+          {hasNoEntries ? (
+            <BodyMetricsEmptyState onLogToday={handleLogToday} />
+          ) : null}
 
           {/* === WEIGHT + WAIST TILES (the trustworthy hero metrics) === */}
           <View className="mt-6 flex-row gap-3">
@@ -201,6 +210,49 @@ function TopBar({ onLogToday, onEdit }: TopBarProps): React.ReactElement {
           </View>
         </Pressable>
       </View>
+    </View>
+  )
+}
+
+// ─────────────────────────────────────────────
+// Empty state — shown when the user has zero body_metric entries.
+// Sits above the metric tiles so it's the first thing they see.
+// ─────────────────────────────────────────────
+
+interface BodyMetricsEmptyStateProps {
+  onLogToday: () => void
+}
+
+function BodyMetricsEmptyState({
+  onLogToday,
+}: BodyMetricsEmptyStateProps): React.ReactElement {
+  return (
+    <View className="mt-6 items-center rounded-3xl bg-mint-50 px-6 py-9">
+      <View className="h-16 w-16 items-center justify-center rounded-full bg-mint-100">
+        <Text className="text-[28px]">{'\u2696\uFE0F'}</Text>
+      </View>
+      <Text
+        className="mt-4 text-center font-sans-bold text-[20px] text-slate-900"
+        style={{ letterSpacing: -0.3 }}
+      >
+        Log your first weigh-in
+      </Text>
+      <Text className="mt-2 max-w-[280px] text-center font-sans text-[13px] text-slate-600">
+        Track weight, waist, and body fat over time so the recomp signal
+        knows what to compare against.
+      </Text>
+      <Pressable
+        onPress={onLogToday}
+        accessibilityRole="button"
+        accessibilityLabel="Log your first weigh-in"
+        hitSlop={6}
+        className="mt-5 rounded-full bg-mint-500 px-6 py-3 active:opacity-80"
+        style={PILL_SHADOW}
+      >
+        <Text className="font-sans-semibold text-[14px] text-white">
+          Log today
+        </Text>
+      </Pressable>
     </View>
   )
 }

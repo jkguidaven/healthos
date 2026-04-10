@@ -19,6 +19,7 @@ import { Alert, Pressable, ScrollView, Text, View } from 'react-native'
 import { router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
+import { ApiKeyBanner } from '@components/ui/api-key-banner'
 import { MacroBar } from '@components/ui/macro-bar'
 import type { FoodLogEntry } from '@db/schema'
 import {
@@ -106,6 +107,13 @@ export function NutritionScreen(): React.ReactElement {
           showsVerticalScrollIndicator={false}
         >
           <TopBar onAddManual={handleOpenManual} />
+
+          {/* API key issues bubble up here so the food scan CTA below
+              never silently fails — banner self-renders nothing when
+              the key is fine. */}
+          <View className="mt-4">
+            <ApiKeyBanner />
+          </View>
 
           <ScanCtaCard onPress={handleOpenScan} />
 
@@ -374,6 +382,35 @@ function FoodLogList({
   onEdit,
   onLongPress,
 }: FoodLogListProps): React.ReactElement {
+  // Day-level empty state — when nothing has been logged yet, render a
+  // single inviting dashed card instead of four duplicate "Nothing
+  // logged yet" stubs (one per meal section). Once the user logs even
+  // one meal we drop back to per-section breakdown so the empty meals
+  // act as quiet placeholders rather than competing with the entries.
+  const totalEntries = MEAL_ORDER.reduce(
+    (sum, { key }) => sum + byMeal[key].length,
+    0,
+  )
+  if (totalEntries === 0) {
+    return (
+      <View className="mt-6 items-center rounded-3xl border-2 border-dashed border-slate-200 bg-slate-50 px-6 py-10">
+        <View className="h-14 w-14 items-center justify-center rounded-full bg-mint-100">
+          <Text className="text-[24px]">{'\uD83C\uDF73'}</Text>
+        </View>
+        <Text
+          className="mt-4 text-center font-sans-bold text-[18px] text-slate-900"
+          style={{ letterSpacing: -0.2 }}
+        >
+          Nothing logged today
+        </Text>
+        <Text className="mt-2 max-w-[260px] text-center font-sans text-[13px] text-slate-500">
+          Tap “Scan food photo” above to log your first meal — Gemini
+          will identify it and estimate macros.
+        </Text>
+      </View>
+    )
+  }
+
   return (
     <View className="mt-6">
       {MEAL_ORDER.map(({ key, label }) => {

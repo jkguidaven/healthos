@@ -27,6 +27,8 @@ import {
   buildFoodScanParts,
   type FoodScanResult,
 } from '@ai/prompts/food-scan'
+import { APIKeyInvalidError } from '@ai/types'
+import { useApiKey } from '@ai/use-api-key'
 import { insertFoodLogEntry } from '@db/queries/food-log'
 import * as schema from '@db/schema'
 import type { NewFoodLogEntry } from '@db/schema'
@@ -85,12 +87,16 @@ export function useFoodScanner(): UseFoodScannerReturn {
   const db = useMemo(() => drizzle(sqlite, { schema }), [sqlite])
 
   const profile = useProfileStore((s) => s.profile)
+  const { markInvalid: markApiKeyInvalid } = useApiKey()
 
   // ─── Step 1: scan ──────────────────────────────────────────
   // Errors from callAI() (APIKeyMissingError, APIKeyInvalidError,
   // AIParseError, AIApiError, AIRateLimitError) are intentionally
   // NOT caught here — we let them propagate so React Query stores
-  // them in `scanError` for the UI to narrow on `.code`.
+  // them in `scanError` for the UI to narrow on `.code`. The
+  // onError side-effect flips the global "API key invalid" flag
+  // when the failure is auth-related so the inline banner shows up
+  // instantly across every AI surface.
   const scanMutation = useMutation<FoodScanResult, Error, ScanFoodArgs>({
     mutationFn: async ({ imageBase64, mimeType, mealContext }) => {
       return callAI({
@@ -100,6 +106,11 @@ export function useFoodScanner(): UseFoodScannerReturn {
         responseSchema: FoodScanGeminiSchema,
         maxTokens: 1024,
       })
+    },
+    onError: (err) => {
+      if (err instanceof APIKeyInvalidError) {
+        markApiKeyInvalid()
+      }
     },
   })
 

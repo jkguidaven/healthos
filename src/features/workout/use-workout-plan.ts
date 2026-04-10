@@ -41,6 +41,8 @@ import {
   type WorkoutOverview,
   type WorkoutDayExercises,
 } from '@ai/prompts/workout-plan'
+import { APIKeyInvalidError } from '@ai/types'
+import { useApiKey } from '@ai/use-api-key'
 import { saveGeneratedPlan, type SavePlanInput } from '@db/queries/workouts'
 import * as schema from '@db/schema'
 import { useProfileStore } from '@/stores/profile-store'
@@ -137,6 +139,7 @@ export function useWorkoutPlan(): UseWorkoutPlanReturn {
   const db = useMemo(() => drizzle(sqlite, { schema }), [sqlite])
 
   const profile = useProfileStore((s) => s.profile)
+  const { markInvalid: markApiKeyInvalid } = useApiKey()
 
   const generateMutation = useMutation<number, Error, GeneratePlanFormInput>({
     mutationFn: async (form) => {
@@ -241,6 +244,13 @@ export function useWorkoutPlan(): UseWorkoutPlanReturn {
       // the new planId so the caller can navigate straight to the plan view.
       const planId = await saveGeneratedPlan(db, saveInput)
       return planId
+    },
+    // Flip the global "API key invalid" flag on auth failures so the
+    // inline banner appears instantly across every AI surface.
+    onError: (err) => {
+      if (err instanceof APIKeyInvalidError) {
+        markApiKeyInvalid()
+      }
     },
   })
 

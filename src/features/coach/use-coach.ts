@@ -29,6 +29,8 @@ import {
   saveCoachEntry,
 } from '@db/queries/coach'
 import { callCoach, type CoachResult } from '@/lib/ai/prompts/coach'
+import { APIKeyInvalidError, APIKeyMissingError } from '@/lib/ai/types'
+import { useApiKey } from '@/lib/ai/use-api-key'
 import { useProfileStore } from '@/stores/profile-store'
 
 // ─────────────────────────────────────────────
@@ -68,12 +70,30 @@ export function useCoach(): UseCoachReturn {
   const sqlite = useSQLiteContext()
   const db = useMemo(() => drizzle(sqlite, { schema }), [sqlite])
   const profileId = useProfileStore((s) => s.profile?.id ?? null)
+  const { markInvalid: markApiKeyInvalid } = useApiKey()
 
   const [entry, setEntry] = useState<CoachResult | null>(null)
   const [entryDate, setEntryDate] = useState<string | null>(null)
   const [loading, setLoading] = useState<boolean>(true)
   const [generating, setGenerating] = useState<boolean>(false)
   const [error, setError] = useState<Error | null>(null)
+
+  // Single error sink — also flips the global "API key invalid" flag
+  // when the failure is auth-related so the inline banner shows up
+  // instantly (and on every other AI surface in the app).
+  const handleError = useCallback(
+    (e: Error) => {
+      if (e instanceof APIKeyInvalidError) {
+        markApiKeyInvalid()
+      }
+      // APIKeyMissingError is already covered by the banner — the
+      // store's hasApiKey flag drives that automatically.
+      if (!(e instanceof APIKeyMissingError)) {
+        setError(e)
+      }
+    },
+    [markApiKeyInvalid],
+  )
 
   // Initial load — cache first, generate only if missing.
   useEffect(() => {
@@ -108,7 +128,7 @@ export function useCoach(): UseCoachReturn {
           },
           onError: (e) => {
             if (cancelled) return
-            setError(e)
+            handleError(e)
           },
           setGenerating: (v) => {
             if (cancelled) return
@@ -117,7 +137,7 @@ export function useCoach(): UseCoachReturn {
         })
       } catch (e) {
         if (cancelled) return
-        setError(e instanceof Error ? e : new Error('Failed to load coach'))
+        handleError(e instanceof Error ? e : new Error('Failed to load coach'))
         setLoading(false)
       }
     }
@@ -126,7 +146,7 @@ export function useCoach(): UseCoachReturn {
     return () => {
       cancelled = true
     }
-  }, [db, profileId])
+  }, [db, profileId, handleError])
 
   // Public regenerate — wired to the "Regenerate digest" CTA.
   const regenerate = useCallback(async (): Promise<void> => {
@@ -137,10 +157,10 @@ export function useCoach(): UseCoachReturn {
         setEntry(result)
         setEntryDate(date)
       },
-      onError: (e) => setError(e),
+      onError: handleError,
       setGenerating,
     })
-  }, [db, profileId, generating])
+  }, [db, profileId, generating, handleError])
 
   return {
     entry,

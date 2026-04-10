@@ -23,6 +23,7 @@ import React from 'react'
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
+import { ApiKeyBanner } from '@components/ui/api-key-banner'
 import { useCoach } from './use-coach'
 import type { CoachResult } from '@/lib/ai/prompts/coach'
 import { useProfileStore } from '@/stores/profile-store'
@@ -84,6 +85,13 @@ export function CoachScreen(): React.ReactElement {
             <Text className="font-sans-medium text-[12px] text-slate-400">
               {formatHeaderDate(new Date())}
             </Text>
+          </View>
+
+          {/* Inline API key banner — self-renders nothing if the key is fine.
+              Sits between the header and the body so it's the first thing the
+              user sees when an auth error needs attention. */}
+          <View className="mt-5">
+            <ApiKeyBanner />
           </View>
 
           {/* Body */}

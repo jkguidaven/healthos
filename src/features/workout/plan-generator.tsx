@@ -31,6 +31,7 @@ import {
 } from 'react-native'
 import { router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { ApiKeyBanner } from '@components/ui/api-key-banner'
 import { Button } from '@components/ui/button'
 import {
   useWorkoutPlan,
@@ -350,6 +351,10 @@ export function PlanGenerator(): React.ReactElement {
 
           {/* === GENERATE CTA === */}
           <View className="mt-8">
+            {/* API key banner — self-renders nothing if the key is fine */}
+            <View className="mb-3">
+              <ApiKeyBanner />
+            </View>
             <Button
               variant="primary"
               loading={isGenerating}
