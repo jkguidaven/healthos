@@ -43,6 +43,8 @@ export interface MetricsData {
   weightDeltaMonth: number | null
   /** Latest body fat % minus 30-day-ago body fat %. `null` if missing. */
   bodyFatDeltaMonth: number | null
+  /** Latest waist (cm) minus waist from 30 days ago. `null` if missing. */
+  waistDeltaMonth: number | null
   /** Interpreted recomp signal, or null if there isn't enough data. */
   recompSignal: RecompSignalResult | null
 }
@@ -72,6 +74,7 @@ const EMPTY_METRICS: MetricsData = {
   weightDeltaWeek: null,
   weightDeltaMonth: null,
   bodyFatDeltaMonth: null,
+  waistDeltaMonth: null,
   recompSignal: null,
 }
 
@@ -142,6 +145,14 @@ export function useMetrics(): UseMetricsResult {
           ? round1(latest.bodyFatPct - monthRef.bodyFatPct)
           : null
 
+      const waistDeltaMonth =
+        monthRef &&
+        monthRef.id !== latest.id &&
+        latest.waistCm !== null &&
+        monthRef.waistCm !== null
+          ? round1(latest.waistCm - monthRef.waistCm)
+          : null
+
       // Recomp signal — needs at least a weekly weight delta. Waist/arm deltas
       // are optional and degrade the classifier gracefully to "unclear" if
       // missing.
@@ -168,6 +179,7 @@ export function useMetrics(): UseMetricsResult {
         weightDeltaWeek,
         weightDeltaMonth,
         bodyFatDeltaMonth,
+        waistDeltaMonth,
         recompSignal,
       })
       setLoading(false)

@@ -58,6 +58,25 @@ export async function getBodyMetricsRange(
 }
 
 /**
+ * Update an existing body metric row by id. Used by the edit measurements
+ * screen to fix mistakes in the most recent entry without creating a
+ * duplicate row for today (which is what `upsertBodyMetric` would do
+ * if the latest entry was from a different day).
+ */
+export async function updateBodyMetric(
+  db: DB,
+  id: number,
+  updates: Partial<NewBodyMetric>,
+): Promise<BodyMetric> {
+  const rows = await db
+    .update(bodyMetricTable)
+    .set(updates)
+    .where(eq(bodyMetricTable.id, id))
+    .returning()
+  return rows[0]
+}
+
+/**
  * Upsert today's body metric entry.
  * Conflict target is (date) — only one entry per day allowed.
  */

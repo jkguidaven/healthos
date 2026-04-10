@@ -17,6 +17,10 @@ import type { BodyMetric } from '@db/schema'
 interface WeightChartProps {
   points: BodyMetric[]
   height?: number
+  /** Extract the value to plot for each point. Defaults to weightKg. */
+  selector?: (point: BodyMetric) => number | null
+  /** Friendly empty-state message. */
+  emptyLabel?: string
 }
 
 // Mint tokens pulled out so they match the Tailwind palette.
@@ -28,16 +32,24 @@ const AXIS_LINE = 'rgba(26, 39, 39, 0.06)' // slate-900 @ 6%
 export function WeightChart({
   points,
   height = 128,
+  selector = (p) => p.weightKg,
+  emptyLabel = 'Log a few weigh-ins to see your trend',
 }: WeightChartProps): React.ReactElement {
+  // Filter out points with no value for the requested series.
+  const usablePoints = points.filter((p) => {
+    const v = selector(p)
+    return v != null && Number.isFinite(v)
+  })
+
   // Empty / low-signal state — fewer than 2 points can't make a line.
-  if (points.length < 2) {
+  if (usablePoints.length < 2) {
     return (
       <View
         className="mt-3 items-center justify-center rounded-2xl bg-mint-50"
         style={{ height }}
       >
         <Text className="font-sans text-[12px] text-slate-400">
-          Log a few weigh-ins to see your trend
+          {emptyLabel}
         </Text>
       </View>
     )
@@ -49,9 +61,9 @@ export function WeightChart({
   const padX = 12
   const padY = 16
 
-  const weights = points.map((p) => p.weightKg)
-  const minW = Math.min(...weights)
-  const maxW = Math.max(...weights)
+  const values = usablePoints.map((p) => selector(p) as number)
+  const minW = Math.min(...values)
+  const maxW = Math.max(...values)
   // Give the line some breathing room when the range is tiny or zero.
   const pad = Math.max(0.4, (maxW - minW) * 0.25)
   const domainMin = minW - pad
@@ -61,9 +73,10 @@ export function WeightChart({
   const innerW = viewW - padX * 2
   const innerH = viewH - padY * 2
 
-  const coords = points.map((p, i) => {
-    const x = padX + (i / (points.length - 1)) * innerW
-    const yRatio = (p.weightKg - domainMin) / domain
+  const coords = usablePoints.map((p, i) => {
+    const v = selector(p) as number
+    const x = padX + (i / (usablePoints.length - 1)) * innerW
+    const yRatio = (v - domainMin) / domain
     const y = padY + (1 - yRatio) * innerH
     return { x, y }
   })
@@ -87,8 +100,8 @@ export function WeightChart({
   const latest = coords[coords.length - 1]
 
   // Format the date range label (oldest → newest).
-  const firstDate = formatShort(points[0].date)
-  const lastDate = formatShort(points[points.length - 1].date)
+  const firstDate = formatShort(usablePoints[0].date)
+  const lastDate = formatShort(usablePoints[usablePoints.length - 1].date)
 
   return (
     <View className="mt-3">

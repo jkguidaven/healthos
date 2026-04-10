@@ -19,9 +19,16 @@ import React from 'react'
 import { Pressable, ScrollView, Text, View } from 'react-native'
 import { router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { Ionicons } from '@expo/vector-icons'
 import { useMetrics, type MetricsData } from './use-metrics'
 import { WeightChart } from './weight-chart'
 import type { BodyMetric } from '@db/schema'
+import {
+  BODY_FAT_CATEGORY_LABEL,
+  getBodyFatCategory,
+  type BodyFatCategory,
+} from '@formulas/body-fat'
+import { useProfileStore } from '@/stores/profile-store'
 
 // ─────────────────────────────────────────────
 // Shared shadow tokens — the primary "Log today" pill keeps a soft mint
@@ -49,6 +56,10 @@ export function MetricsScreen(): React.ReactElement {
     router.push('/(tabs)/body/body-fat')
   }
 
+  const handleEdit = (): void => {
+    router.push('/(tabs)/body/edit')
+  }
+
   const handleExpandTrend = (): void => {
     // Full 90-day trend screen hasn't been built yet.
     console.log('expand trend')
@@ -71,19 +82,22 @@ export function MetricsScreen(): React.ReactElement {
           showsVerticalScrollIndicator={false}
         >
           {/* === TOP BAR === */}
-          <TopBar onLogToday={handleLogToday} />
+          <TopBar onLogToday={handleLogToday} onEdit={handleEdit} />
 
-          {/* === WEIGHT + BODY FAT TILES === */}
+          {/* === WEIGHT + WAIST TILES (the trustworthy hero metrics) === */}
           <View className="mt-6 flex-row gap-3">
             <WeightTile data={data} />
-            <BodyFatTile data={data} />
+            <WaistTile data={data} />
           </View>
+
+          {/* === BODY FAT ESTIMATE CARD (with caveat + trend) === */}
+          <BodyFatEstimateCard data={data} />
 
           {/* === 30-DAY WEIGHT TREND === */}
           <View className="mt-3 rounded-3xl border border-slate-100 bg-white p-5">
             <View className="flex-row items-center justify-between">
               <Text className="font-sans-semibold text-[14px] text-slate-600">
-                30-day trend
+                30-day weight trend
               </Text>
               <Pressable
                 onPress={handleExpandTrend}
@@ -139,9 +153,10 @@ export function MetricsScreen(): React.ReactElement {
 
 interface TopBarProps {
   onLogToday: () => void
+  onEdit: () => void
 }
 
-function TopBar({ onLogToday }: TopBarProps): React.ReactElement {
+function TopBar({ onLogToday, onEdit }: TopBarProps): React.ReactElement {
   return (
     <View className="flex-row items-center justify-between pt-2">
       <View>
@@ -155,22 +170,37 @@ function TopBar({ onLogToday }: TopBarProps): React.ReactElement {
           Your recomp dashboard
         </Text>
       </View>
-      <Pressable
-        onPress={onLogToday}
-        accessibilityRole="button"
-        accessibilityLabel="Log today"
-        className="active:opacity-90"
-      >
-        <View
-          className="flex-row items-center gap-1.5 rounded-full bg-mint-500 px-4 py-2.5"
-          style={PILL_SHADOW}
+      <View className="flex-row items-center gap-2">
+        <Pressable
+          onPress={onEdit}
+          accessibilityRole="button"
+          accessibilityLabel="Edit measurements"
+          className="active:opacity-80"
         >
-          <Text className="font-sans-semibold text-[13px] text-white">+</Text>
-          <Text className="font-sans-semibold text-[12px] text-white">
-            Log today
-          </Text>
-        </View>
-      </Pressable>
+          <View className="flex-row items-center gap-1 rounded-full border border-slate-100 bg-white px-3 py-2.5">
+            <Ionicons name="create-outline" size={14} color="#475569" />
+            <Text className="font-sans-semibold text-[12px] text-slate-600">
+              Edit
+            </Text>
+          </View>
+        </Pressable>
+        <Pressable
+          onPress={onLogToday}
+          accessibilityRole="button"
+          accessibilityLabel="Log today"
+          className="active:opacity-90"
+        >
+          <View
+            className="flex-row items-center gap-1.5 rounded-full bg-mint-500 px-4 py-2.5"
+            style={PILL_SHADOW}
+          >
+            <Text className="font-sans-semibold text-[13px] text-white">+</Text>
+            <Text className="font-sans-semibold text-[12px] text-white">
+              Log today
+            </Text>
+          </View>
+        </Pressable>
+      </View>
     </View>
   )
 }
@@ -211,32 +241,208 @@ function WeightTile({ data }: TileProps): React.ReactElement {
 }
 
 // ─────────────────────────────────────────────
-// Body fat tile
+// Waist tile — promoted to a hero metric because for a recomp user it's
+// a more trustworthy fat-loss signal than calculated body fat % (the
+// Navy formula is famously inflated for muscular people).
 // ─────────────────────────────────────────────
 
-function BodyFatTile({ data }: TileProps): React.ReactElement {
-  const bodyFat = data.latest?.bodyFatPct ?? null
-  const delta = data.bodyFatDeltaMonth
+function WaistTile({ data }: TileProps): React.ReactElement {
+  const waist = data.latest?.waistCm ?? null
+  const delta = data.waistDeltaMonth
 
   return (
     <View className="flex-1 rounded-3xl border border-slate-100 bg-white p-5">
       <Text className="font-sans-medium text-[12px] text-slate-500">
-        Body fat
+        Waist
       </Text>
       <View className="mt-1.5 flex-row items-baseline">
         <Text
           className="font-sans-bold text-[32px] text-slate-900"
           style={{ letterSpacing: -0.5 }}
         >
-          {bodyFat !== null ? bodyFat.toFixed(1) : '—'}
+          {waist !== null ? waist.toFixed(1) : '—'}
         </Text>
-        {bodyFat !== null ? (
+        {waist !== null ? (
           <Text className="ml-1.5 font-sans-medium text-[14px] text-slate-600">
-            %
+            cm
           </Text>
         ) : null}
       </View>
-      <DeltaRow delta={delta} unit="%" period="this month" inverse={false} />
+      <DeltaRow delta={delta} unit="cm" period="this month" inverse={false} />
+    </View>
+  )
+}
+
+// ─────────────────────────────────────────────
+// Body fat estimate card — full width.
+// Shown below the Weight + Waist hero row. Body fat is a calculated
+// estimate (not a measurement), and the Navy formula systematically
+// over-estimates body fat for muscular people, so the card communicates
+// the uncertainty explicitly:
+//   - Big number with a small "estimate" badge
+//   - 30-day trend chart (delta matters more than absolute)
+//   - "How accurate is this?" expandable explanation
+// ─────────────────────────────────────────────
+
+/**
+ * Map a body fat fitness category to a tone palette. Athletic + Fitness
+ * read as "you're crushing it" (mint), Average is neutral (slate), and
+ * Above average gets a soft amber so it's noticed without feeling like
+ * a scolding red alert.
+ */
+function bodyFatCategoryTone(category: BodyFatCategory): {
+  bg: string
+  border: string
+  text: string
+} {
+  switch (category) {
+    case 'essential':
+      return {
+        bg: 'bg-blue-50',
+        border: 'border-blue-100',
+        text: 'text-blue-700',
+      }
+    case 'athletic':
+    case 'fitness':
+      return {
+        bg: 'bg-mint-50',
+        border: 'border-mint-100',
+        text: 'text-mint-700',
+      }
+    case 'average':
+      return {
+        bg: 'bg-slate-50',
+        border: 'border-slate-100',
+        text: 'text-slate-600',
+      }
+    case 'obese':
+      return {
+        bg: 'bg-amber-50',
+        border: 'border-amber-100',
+        text: 'text-amber-800',
+      }
+  }
+}
+
+function BodyFatEstimateCard({ data }: TileProps): React.ReactElement {
+  const [showDetails, setShowDetails] = React.useState(false)
+  const sex = useProfileStore((s) => s.profile?.sex ?? null)
+  const bodyFat = data.latest?.bodyFatPct ?? null
+  const delta = data.bodyFatDeltaMonth
+
+  // Derive the fitness category from the latest body fat reading + sex.
+  const category =
+    bodyFat !== null && sex !== null ? getBodyFatCategory(sex, bodyFat) : null
+
+  return (
+    <View className="mt-3 rounded-3xl border border-slate-100 bg-white p-5">
+      <View className="flex-row items-start justify-between">
+        <View className="flex-1">
+          <View className="flex-row items-center gap-2">
+            <Text className="font-sans-semibold text-[14px] text-slate-600">
+              Body fat
+            </Text>
+            <View className="rounded-full border border-slate-100 bg-slate-50 px-2 py-0.5">
+              <Text className="font-sans-medium text-[9px] tracking-wider text-slate-500">
+                ESTIMATE
+              </Text>
+            </View>
+          </View>
+          <View className="mt-2 flex-row items-baseline">
+            <Text
+              className="font-sans-bold text-[40px] text-slate-900"
+              style={{ letterSpacing: -1 }}
+            >
+              {bodyFat !== null ? bodyFat.toFixed(1) : '—'}
+            </Text>
+            {bodyFat !== null ? (
+              <Text className="ml-1.5 font-sans-medium text-[14px] text-slate-600">
+                %
+              </Text>
+            ) : null}
+          </View>
+          <DeltaRow
+            delta={delta}
+            unit="%"
+            period="this month"
+            inverse={false}
+          />
+        </View>
+
+        {/* Fitness category pill — Athletic / Fitness / Average / Above average */}
+        {category ? (
+          <View
+            className={`rounded-full border px-3 py-1 ${bodyFatCategoryTone(category).bg} ${bodyFatCategoryTone(category).border}`}
+          >
+            <Text
+              className={`font-sans-semibold text-[11px] ${bodyFatCategoryTone(category).text}`}
+            >
+              {BODY_FAT_CATEGORY_LABEL[category]}
+            </Text>
+          </View>
+        ) : null}
+      </View>
+
+      {/* 30-day body fat trend — emphasises the delta over the absolute. */}
+      {data.thirtyDayTrend.length >= 2 ? (
+        <View className="mt-4">
+          <Text className="font-sans text-[11px] text-slate-400">
+            30-day trend
+          </Text>
+          <WeightChart
+            points={data.thirtyDayTrend}
+            selector={(p) => p.bodyFatPct}
+            height={96}
+            emptyLabel="Log a few body-fat readings to see the trend"
+          />
+        </View>
+      ) : null}
+
+      {/* Caveat / accuracy explainer */}
+      <Pressable
+        onPress={() => setShowDetails((v) => !v)}
+        accessibilityRole="button"
+        accessibilityLabel="How accurate is this?"
+        hitSlop={8}
+        className="mt-4 active:opacity-70"
+      >
+        <View className="flex-row items-center gap-2 rounded-2xl bg-slate-50 px-3 py-2.5">
+          <Ionicons name="information-circle" size={14} color="#64748B" />
+          <Text className="flex-1 font-sans-medium text-[11px] text-slate-600">
+            How accurate is this?
+          </Text>
+          <Ionicons
+            name={showDetails ? 'chevron-up' : 'chevron-down'}
+            size={12}
+            color="#94A3B8"
+          />
+        </View>
+      </Pressable>
+
+      {showDetails ? (
+        <View className="mt-2 rounded-2xl border border-slate-100 bg-white p-4">
+          <Text
+            className="font-sans text-[11px] text-slate-600"
+            style={{ lineHeight: 16 }}
+          >
+            This number comes from the US Navy formula (waist, neck, height
+            for men; + hip for women). For an average person it&apos;s within
+            ±3-4%. For lifters it&apos;s often 3-6 percentage points high
+            because squat-developed obliques and back muscle inflate your
+            waist measurement without adding fat.
+            {'\n\n'}
+            <Text className="font-sans-semibold">Trust the trend, not the absolute number.</Text>
+            {' '}If your reading drops 2 points over a month, you really
+            did lose ~2 percentage points — even if the starting number
+            was off.
+            {'\n\n'}
+            For a more accurate read: a DEXA scan ($150-300) or skin
+            calipers from a trained measurer. For day-to-day recomp
+            tracking, your waist circumference and progress photos are
+            more honest.
+          </Text>
+        </View>
+      ) : null}
     </View>
   )
 }

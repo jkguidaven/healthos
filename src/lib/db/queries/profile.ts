@@ -52,3 +52,23 @@ export async function hasProfile(db: DB): Promise<boolean> {
     .limit(1)
   return rows.length > 0
 }
+
+/**
+ * Partial update of the existing profile row by id.
+ * Lets callers fix individual fields (e.g. height) without having to
+ * pass the full NewProfile shape — important for editor flows that read
+ * from the Zustand cache (which has slightly different field types
+ * than the DB row).
+ */
+export async function updateProfile(
+  db: DB,
+  id: number,
+  updates: Partial<NewProfile>,
+): Promise<Profile> {
+  const rows = await db
+    .update(profileTable)
+    .set(updates)
+    .where(eq(profileTable.id, id))
+    .returning()
+  return rows[0]
+}

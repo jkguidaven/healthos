@@ -213,10 +213,11 @@ function DashboardContent({
         <MiniStatCard
           label="Water"
           value={`${formatLiters(data.todayWaterMl)} L`}
-          sublabel={`of ${formatLiters(data.waterTarget)} L`}
-          valueTone={
-            data.todayWaterMl < data.waterTarget * 0.5 ? 'coral' : 'default'
-          }
+          sublabel={waterSublabel(data.todayWaterMl, data.waterTarget)}
+          progressPct={(data.todayWaterMl / data.waterTarget) * 100}
+          icon="water"
+          iconColor="#2BBF9E"
+          iconBg="bg-mint-100"
           onPress={() => {
             router.push('/(tabs)/food/water')
           }}
@@ -479,6 +480,16 @@ interface MiniStatCardProps {
   value: string
   sublabel: string
   valueTone?: 'default' | 'coral'
+  /** When provided (0-100), draws a thin progress bar at the bottom of
+   * the card. Used by the Water tile so the user sees daily progress
+   * toward the hydration target. Other tiles leave this undefined. */
+  progressPct?: number
+  /** Optional Ionicons name to render in a small accent circle in the
+   * top-right of the card. Used to humanize stats that aren't obviously
+   * a number (e.g. Water gets a 💧 droplet). */
+  icon?: React.ComponentProps<typeof Ionicons>['name']
+  iconColor?: string
+  iconBg?: string
   onPress?: () => void
   accessibilityLabel?: string
 }
@@ -488,15 +499,30 @@ function MiniStatCard({
   value,
   sublabel,
   valueTone = 'default',
+  progressPct,
+  icon,
+  iconColor = '#15805F',
+  iconBg = 'bg-mint-100',
   onPress,
   accessibilityLabel,
 }: MiniStatCardProps): React.ReactElement {
   const valueColor =
     valueTone === 'coral' ? 'text-brand-coral' : 'text-slate-900'
 
+  const clampedPct =
+    progressPct != null ? Math.max(0, Math.min(100, progressPct)) : null
+
   const inner = (
     <View className="flex-1 rounded-3xl border border-slate-100 bg-white p-4">
-      <Text className="font-sans text-[11px] text-slate-500">{label}</Text>
+      <View className="flex-row items-start justify-between">
+        <Text className="font-sans text-[11px] text-slate-500">{label}</Text>
+        {icon ? (
+          <View className={`h-7 w-7 items-center justify-center rounded-full ${iconBg}`}>
+            <Ionicons name={icon} size={14} color={iconColor} />
+          </View>
+        ) : null}
+      </View>
+
       <Text
         className={`mt-1 font-sans-bold text-[22px] ${valueColor}`}
         style={{ letterSpacing: -0.5 }}
@@ -506,6 +532,15 @@ function MiniStatCard({
       <Text className="mt-0.5 font-sans text-[11px] text-slate-400">
         {sublabel}
       </Text>
+
+      {clampedPct != null ? (
+        <View className="mt-3 h-1.5 overflow-hidden rounded-full bg-mint-50">
+          <View
+            className="h-full rounded-full bg-mint-500"
+            style={{ width: `${clampedPct}%` }}
+          />
+        </View>
+      ) : null}
     </View>
   )
 
@@ -623,4 +658,18 @@ function formatOneDecimal(value: number): string {
 function formatLiters(ml: number): string {
   if (!Number.isFinite(ml) || ml <= 0) return '0.0'
   return (ml / 1000).toFixed(1)
+}
+
+/**
+ * Friendlier sublabel for the Water mini-stat. Shows the remaining
+ * litres needed to hit the goal, or a celebration when the user has
+ * crossed the target. Falls back to "Tap to log" when nothing is
+ * logged yet.
+ */
+function waterSublabel(currentMl: number, targetMl: number): string {
+  if (currentMl <= 0) return 'Tap to log'
+  if (currentMl >= targetMl) return 'Goal hit ✓'
+  const remainingMl = targetMl - currentMl
+  const remainingL = (remainingMl / 1000).toFixed(1)
+  return `${remainingL} L to go`
 }
