@@ -14,7 +14,10 @@ import {
 } from '@expo-google-fonts/poppins'
 import migration0000 from '../src/lib/db/migrations/0000_handy_lucky_pierre.sql'
 import { hydrateApiKeyStatus } from '../src/lib/ai/api-key'
-import { scheduleAllReminders } from '../src/lib/notifications/notifications'
+import {
+  notificationsSupported,
+  scheduleAllReminders,
+} from '../src/lib/notifications/notifications'
 import { useNotificationsStore } from '../src/stores/notifications-store'
 
 SplashScreen.preventAutoHideAsync()
@@ -66,15 +69,18 @@ async function runMigrations(db: SQLiteDatabase): Promise<void> {
  * Re-syncs the local notification schedule with the user's saved
  * `enabled` flag on every boot. The OS can clear scheduled
  * notifications across reboots/updates, so we re-arm them here if
- * the user previously opted in. Web is a no-op because
- * `expo-notifications` is not supported there — guarding at this
- * level keeps the web build from crashing at startup.
+ * the user previously opted in.
+ *
+ * Skips entirely on unsupported runtimes (web, Expo Go) — the
+ * notifications module's own no-ops would handle it safely, but
+ * short-circuiting here means we don't even touch the lazy require()
+ * inside the wrapper, which avoids any startup overhead.
  */
 function NotificationsBootSync(): null {
   const enabled = useNotificationsStore((state) => state.enabled)
 
   useEffect(() => {
-    if (Platform.OS === 'web') return
+    if (!notificationsSupported()) return
     if (!enabled) return
     scheduleAllReminders().catch((e) => {
       console.warn('[NotificationsBootSync] reschedule failed:', e)

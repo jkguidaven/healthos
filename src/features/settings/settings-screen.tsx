@@ -48,6 +48,7 @@ export function SettingsScreen(): React.ReactElement {
   const {
     enabled: notificationsOn,
     loading: notificationsLoading,
+    supported: notificationsSupported,
     toggleEnabled: setNotificationsEnabled,
   } = useNotifications()
 
@@ -191,12 +192,17 @@ export function SettingsScreen(): React.ReactElement {
             />
             <Row
               label="Notifications"
+              subtitle={
+                notificationsSupported
+                  ? undefined
+                  : 'Unavailable in Expo Go — use a development build'
+              }
               isLast
               right={
                 <Switch
                   value={notificationsOn}
                   onValueChange={handleToggleNotifications}
-                  disabled={notificationsLoading}
+                  disabled={notificationsLoading || !notificationsSupported}
                   trackColor={{ false: '#E2E8F0', true: '#7BDAB9' }}
                   thumbColor={notificationsOn ? '#1D9E75' : '#F8FAFC'}
                   ios_backgroundColor="#E2E8F0"

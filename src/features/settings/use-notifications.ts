@@ -20,10 +20,11 @@
  * leaves the toggle off and never crashes.
  */
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   cancelAllReminders,
   getNotificationStatus,
+  notificationsSupported,
   requestPermissions,
   scheduleAllReminders,
 } from '@/lib/notifications/notifications'
@@ -32,19 +33,33 @@ import { useNotificationsStore } from '@/stores/notifications-store'
 export interface UseNotificationsResult {
   enabled: boolean
   loading: boolean
+  /**
+   * False on web and inside Expo Go (where `expo-notifications` is
+   * unavailable). The settings UI should disable the toggle and
+   * surface an explanation when this is false.
+   */
+  supported: boolean
   toggleEnabled: (value: boolean) => Promise<void>
 }
 
 export function useNotifications(): UseNotificationsResult {
   const enabled = useNotificationsStore((state) => state.enabled)
   const setEnabled = useNotificationsStore((state) => state.setEnabled)
-  const [loading, setLoading] = useState<boolean>(true)
+  // Memoise so the value is stable across renders even though the
+  // underlying check is a synchronous platform read.
+  const supported = useMemo(() => notificationsSupported(), [])
+  const [loading, setLoading] = useState<boolean>(supported)
 
   // Hydrate the toggle on first mount by asking the OS what is
   // currently scheduled. This keeps the UI honest after the system
   // (or the user, in their device settings) clears notifications
-  // outside the app.
+  // outside the app. Skipped entirely on unsupported runtimes.
   useEffect(() => {
+    if (!supported) {
+      setEnabled(false)
+      setLoading(false)
+      return
+    }
     let cancelled = false
     void (async (): Promise<void> => {
       try {
@@ -61,10 +76,17 @@ export function useNotifications(): UseNotificationsResult {
     return (): void => {
       cancelled = true
     }
-  }, [setEnabled])
+  }, [setEnabled, supported])
 
   const toggleEnabled = useCallback(
     async (value: boolean): Promise<void> => {
+      if (!supported) {
+        // Unsupported runtime — keep the toggle off and don't try to
+        // load the native module. The settings UI should already be
+        // disabling the switch in this state.
+        setEnabled(false)
+        return
+      }
       setLoading(true)
       try {
         if (value) {
@@ -88,8 +110,8 @@ export function useNotifications(): UseNotificationsResult {
         setLoading(false)
       }
     },
-    [setEnabled],
+    [setEnabled, supported],
   )
 
-  return { enabled, loading, toggleEnabled }
+  return { enabled, loading, supported, toggleEnabled }
 }
