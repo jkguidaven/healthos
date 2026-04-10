@@ -6,36 +6,48 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 interface ScreenLayoutProps {
   children: React.ReactNode
   scroll?: boolean
-  /** Adds a soft mint gradient background. Default true. */
+  /**
+   * Opt in to the soft mint gradient + decorative circles backdrop.
+   * Used by the onboarding flow only — main-app screens render on a
+   * flat white page surface and leave this flag off.
+   */
   gradient?: boolean
 }
 
 export function ScreenLayout({
   children,
   scroll = false,
-  gradient = true,
+  gradient = false,
 }: ScreenLayoutProps) {
   return (
-    <View className="flex-1 bg-mint-50">
+    <View className={`flex-1 ${gradient ? 'bg-mint-50' : 'bg-white'}`}>
       {gradient ? (
-        <LinearGradient
-          colors={['#F0FBF7', '#D8F3E8', '#B5E8D5']}
-          locations={[0, 0.5, 1]}
-          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-        />
-      ) : null}
+        <>
+          <LinearGradient
+            colors={['#F0FBF7', '#D8F3E8', '#B5E8D5']}
+            locations={[0, 0.5, 1]}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+            }}
+          />
 
-      {/* Soft decorative circles for atmospheric depth */}
-      <View
-        className="absolute rounded-full bg-white/30"
-        style={{ width: 280, height: 280, top: -80, right: -100 }}
-        pointerEvents="none"
-      />
-      <View
-        className="absolute rounded-full bg-white/20"
-        style={{ width: 200, height: 200, top: 200, left: -80 }}
-        pointerEvents="none"
-      />
+          {/* Soft decorative circles for atmospheric depth */}
+          <View
+            className="absolute rounded-full bg-white/30"
+            style={{ width: 280, height: 280, top: -80, right: -100 }}
+            pointerEvents="none"
+          />
+          <View
+            className="absolute rounded-full bg-white/20"
+            style={{ width: 200, height: 200, top: 200, left: -80 }}
+            pointerEvents="none"
+          />
+        </>
+      ) : null}
 
       <SafeAreaView edges={['top', 'bottom']} className="flex-1">
         {scroll ? (

@@ -6,10 +6,9 @@
  * Daily list of food entries grouped by meal, with a big "scan food" CTA
  * at the top and a today summary card.
  *
- * Visual language mirrors the dashboard and body screens: soft 3-stop
- * mint gradient background, decorative blurred circles, rounded-3xl
- * white cards with mint shadows, Poppins-only typography, generous
- * whitespace. Intent: welcoming, scannable, calm.
+ * Visual language: flat white surface, rounded-3xl white cards with a
+ * 1px slate border, mint accents on pills and CTAs. Poppins-only
+ * typography, generous whitespace. Intent: welcoming, scannable, calm.
  *
  * Data comes from `useFoodLog`. This file is pure presentation + light
  * formatting. No StyleSheet.create, no raw SQL, no `any`.
@@ -18,7 +17,6 @@
 import React, { useCallback } from 'react'
 import { Alert, Pressable, ScrollView, Text, View } from 'react-native'
 import { router } from 'expo-router'
-import { LinearGradient } from 'expo-linear-gradient'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 import { MacroBar } from '@components/ui/macro-bar'
@@ -29,42 +27,6 @@ import {
   type NutritionData,
 } from './use-food-log'
 import { useWaterLog, type WaterLogData } from './use-water-log'
-
-// ─────────────────────────────────────────────
-// Shared shadow tokens — tuned to the mint surface so cards feel lifted.
-// ─────────────────────────────────────────────
-
-const HERO_CARD_SHADOW = {
-  shadowColor: '#1D9E75',
-  shadowOffset: { width: 0, height: 10 },
-  shadowOpacity: 0.15,
-  shadowRadius: 24,
-  elevation: 8,
-} as const
-
-const CARD_SHADOW = {
-  shadowColor: '#1D9E75',
-  shadowOffset: { width: 0, height: 8 },
-  shadowOpacity: 0.12,
-  shadowRadius: 20,
-  elevation: 6,
-} as const
-
-const SOFT_CARD_SHADOW = {
-  shadowColor: '#1D9E75',
-  shadowOffset: { width: 0, height: 4 },
-  shadowOpacity: 0.08,
-  shadowRadius: 14,
-  elevation: 3,
-} as const
-
-const PILL_SHADOW = {
-  shadowColor: '#2BBF9E',
-  shadowOffset: { width: 0, height: 6 },
-  shadowOpacity: 0.25,
-  shadowRadius: 12,
-  elevation: 5,
-} as const
 
 // ─────────────────────────────────────────────
 // Meal configuration — stable order for the section loop.
@@ -132,28 +94,7 @@ export function NutritionScreen(): React.ReactElement {
   )
 
   return (
-    <View className="flex-1 bg-mint-100">
-      {/* Atmospheric mint gradient — same 3-stop palette as welcome / dashboard. */}
-      <LinearGradient
-        colors={['#F0FBF7', '#D8F3E8', '#B5E8D5']}
-        locations={[0, 0.55, 1]}
-        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-      />
-
-      {/* Decorative soft circles. */}
-      <View
-        className="absolute rounded-full bg-white/30"
-        style={{ width: 280, height: 280, top: -90, right: -110 }}
-      />
-      <View
-        className="absolute rounded-full bg-white/20"
-        style={{ width: 220, height: 220, top: 260, left: -100 }}
-      />
-      <View
-        className="absolute rounded-full bg-white/15"
-        style={{ width: 180, height: 180, bottom: 60, right: -60 }}
-      />
-
+    <View className="flex-1 bg-white">
       <SafeAreaView edges={['top']} className="flex-1">
         <ScrollView
           className="flex-1"
@@ -212,10 +153,7 @@ function TopBar({ onAddManual }: TopBarProps): React.ReactElement {
         accessibilityLabel="Add manual entry"
         className="active:opacity-90"
       >
-        <View
-          className="flex-row items-center gap-1.5 rounded-full bg-white px-4 py-2.5"
-          style={SOFT_CARD_SHADOW}
-        >
+        <View className="flex-row items-center gap-1.5 rounded-full border border-slate-100 bg-white px-4 py-2.5">
           <Text className="font-sans-semibold text-[13px] text-mint-600">
             +
           </Text>
@@ -244,14 +182,8 @@ function ScanCtaCard({ onPress }: ScanCtaCardProps): React.ReactElement {
       accessibilityLabel="Scan food photo or barcode"
       className="mt-6 active:opacity-90"
     >
-      <View
-        className="flex-row items-center rounded-3xl bg-white p-5"
-        style={HERO_CARD_SHADOW}
-      >
-        <View
-          className="h-11 w-11 items-center justify-center rounded-full bg-mint-100"
-          style={PILL_SHADOW}
-        >
+      <View className="flex-row items-center rounded-3xl border border-slate-100 bg-white p-5">
+        <View className="h-11 w-11 items-center justify-center rounded-full bg-mint-100">
           <Text className="text-[18px]">📷</Text>
         </View>
 
@@ -289,7 +221,7 @@ function TodaySummaryCard({
   const dateLabel = formatTodayLabel(new Date())
 
   return (
-    <View className="mt-4 rounded-3xl bg-white p-5" style={CARD_SHADOW}>
+    <View className="mt-4 rounded-3xl border border-slate-100 bg-white p-5">
       <View className="flex-row items-center justify-between">
         <Text className="font-sans-semibold text-[14px] text-slate-600">
           Today&apos;s totals
@@ -395,14 +327,8 @@ function WaterShortcutCard({
       accessibilityLabel="Open water tracker"
       className="mt-4 active:opacity-90"
     >
-      <View
-        className="flex-row items-center rounded-3xl bg-white p-5"
-        style={CARD_SHADOW}
-      >
-        <View
-          className="h-11 w-11 items-center justify-center rounded-full bg-mint-50"
-          style={SOFT_CARD_SHADOW}
-        >
+      <View className="flex-row items-center rounded-3xl border border-slate-100 bg-white p-5">
+        <View className="h-11 w-11 items-center justify-center rounded-full bg-mint-50">
           <Text className="text-[18px]">💧</Text>
         </View>
 
@@ -502,7 +428,7 @@ function MealSection({
       </View>
 
       {isEmpty ? (
-        <View className="items-center rounded-2xl border-2 border-dashed border-slate-200 bg-white/40 p-4">
+        <View className="items-center rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 p-4">
           <Text className="font-sans text-[12px] italic text-slate-400">
             Nothing logged yet
           </Text>
@@ -551,10 +477,7 @@ function FoodEntryCard({
       accessibilityLabel={`Edit ${entry.name}`}
       className="active:opacity-90"
     >
-      <View
-        className="flex-row items-center rounded-2xl bg-white p-4"
-        style={SOFT_CARD_SHADOW}
-      >
+      <View className="flex-row items-center rounded-2xl border border-slate-100 bg-white p-4">
         <View className="flex-1 pr-3">
           <Text
             className="font-sans-semibold text-[14px] text-slate-900"

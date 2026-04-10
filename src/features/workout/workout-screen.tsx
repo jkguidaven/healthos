@@ -12,9 +12,9 @@
  * state with a single "Generate your first plan" action. Both states
  * route into `/(tabs)/workout/generate` — owned by a parallel agent (#45).
  *
- * Visual language matches the rest of the app: mint gradient background
- * with soft decorative circles, Poppins-only typography, rounded-3xl
- * white cards with mint shadows, rounded-full pill CTAs.
+ * Visual language matches the rest of the app: flat white page with
+ * rounded-3xl white cards separated by subtle slate borders. Mint pill
+ * CTAs keep a soft glow so the primary action still feels elevated.
  *
  * Layer 4 (screen). All data comes from `useWorkoutPlanView()`; this
  * file is pure presentation with small formatting helpers.
@@ -23,7 +23,6 @@
 import React from 'react'
 import { Pressable, ScrollView, Text, View } from 'react-native'
 import { router } from 'expo-router'
-import { LinearGradient } from 'expo-linear-gradient'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Button } from '@components/ui/button'
 import {
@@ -34,33 +33,10 @@ import {
 import type { Session, WorkoutPlan } from '@db/schema'
 
 // ─────────────────────────────────────────────
-// Shared shadow tokens — tuned for mint-on-mint cards. Inlined here so
-// the screen reads as one self-contained visual module.
+// Primary mint-pill glow. Kept for the "Begin" and "Active" CTAs so the
+// main action on each day still feels slightly elevated above the flat
+// card surfaces.
 // ─────────────────────────────────────────────
-
-const HERO_CARD_SHADOW = {
-  shadowColor: '#1D9E75',
-  shadowOffset: { width: 0, height: 10 },
-  shadowOpacity: 0.15,
-  shadowRadius: 24,
-  elevation: 8,
-} as const
-
-const CARD_SHADOW = {
-  shadowColor: '#1D9E75',
-  shadowOffset: { width: 0, height: 6 },
-  shadowOpacity: 0.1,
-  shadowRadius: 18,
-  elevation: 5,
-} as const
-
-const SOFT_CARD_SHADOW = {
-  shadowColor: '#1D9E75',
-  shadowOffset: { width: 0, height: 4 },
-  shadowOpacity: 0.08,
-  shadowRadius: 14,
-  elevation: 3,
-} as const
 
 const MINT_PILL_SHADOW = {
   shadowColor: '#2BBF9E',
@@ -89,28 +65,7 @@ export function WorkoutScreen(): React.ReactElement {
   const hasPlan = data.plan != null
 
   return (
-    <View className="flex-1 bg-mint-100">
-      {/* Atmospheric mint gradient — same 3-stop as every other tab. */}
-      <LinearGradient
-        colors={['#F0FBF7', '#D8F3E8', '#B5E8D5']}
-        locations={[0, 0.55, 1]}
-        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-      />
-
-      {/* Decorative soft circles for depth. */}
-      <View
-        className="absolute rounded-full bg-white/30"
-        style={{ width: 280, height: 280, top: -90, right: -110 }}
-      />
-      <View
-        className="absolute rounded-full bg-white/20"
-        style={{ width: 220, height: 220, top: 260, left: -100 }}
-      />
-      <View
-        className="absolute rounded-full bg-white/15"
-        style={{ width: 180, height: 180, bottom: 40, right: -60 }}
-      />
-
+    <View className="flex-1 bg-white">
       <SafeAreaView edges={['top']} className="flex-1">
         <ScrollView
           className="flex-1"
@@ -167,10 +122,7 @@ function TopBar({ hasPlan, onGenerate }: TopBarProps): React.ReactElement {
           hitSlop={8}
           className="active:opacity-70"
         >
-          <View
-            className="rounded-full bg-white px-4 py-2"
-            style={SOFT_CARD_SHADOW}
-          >
+          <View className="rounded-full border border-slate-100 bg-white px-4 py-2">
             <Text className="font-sans-medium text-[12px] text-slate-600">
               New plan
             </Text>
@@ -188,10 +140,7 @@ function TopBar({ hasPlan, onGenerate }: TopBarProps): React.ReactElement {
 function LoadingState(): React.ReactElement {
   return (
     <View className="flex-1 items-center justify-center pt-40">
-      <View
-        className="h-14 w-14 items-center justify-center rounded-full bg-white"
-        style={SOFT_CARD_SHADOW}
-      >
+      <View className="h-14 w-14 items-center justify-center rounded-full border border-slate-100 bg-white">
         <View className="h-6 w-6 rounded-full bg-mint-300" />
       </View>
       <Text className="mt-4 font-sans text-[13px] text-slate-500">
@@ -216,14 +165,8 @@ function EmptyState({ onGenerate }: EmptyStateProps): React.ReactElement {
       className="flex-1 items-center justify-center"
       style={{ paddingBottom: 80 }}
     >
-      <View
-        className="w-full items-center rounded-3xl bg-white p-7"
-        style={HERO_CARD_SHADOW}
-      >
-        <View
-          className="h-20 w-20 items-center justify-center rounded-full bg-mint-100"
-          style={SOFT_CARD_SHADOW}
-        >
+      <View className="w-full items-center rounded-3xl border border-slate-100 bg-white p-7">
+        <View className="h-20 w-20 items-center justify-center rounded-full bg-mint-100">
           <Text className="text-[36px]">{'\u{1F4AA}'}</Text>
         </View>
 
@@ -336,7 +279,7 @@ function PlanSummaryCard({
   const meta = `Week ${CURRENT_WEEK} of ${plan.weeksTotal} \u00B7 ${splitLabel} \u00B7 ${plan.daysPerWeek} days/week`
 
   return (
-    <View className="rounded-3xl bg-white p-5" style={HERO_CARD_SHADOW}>
+    <View className="rounded-3xl border border-slate-100 bg-white p-5">
       <View className="flex-row items-start justify-between">
         <View className="flex-1 pr-3">
           <Text
@@ -440,7 +383,7 @@ function DayCard({
   }
 
   return (
-    <View className="rounded-3xl bg-white p-5" style={CARD_SHADOW}>
+    <View className="rounded-3xl border border-slate-100 bg-white p-5">
       <View className="flex-row items-start justify-between">
         <View className="flex-1 pr-3">
           <View className="flex-row items-center gap-2">
@@ -553,7 +496,7 @@ function RecentSessionsSection({
       <Text className="mb-3 font-sans-semibold text-[14px] text-slate-700">
         Recent sessions
       </Text>
-      <View className="rounded-3xl bg-white p-2" style={CARD_SHADOW}>
+      <View className="rounded-3xl border border-slate-100 bg-white p-2">
         {visible.map((session, idx) => {
           const matchingDay = days.find((d) => d.day.id === session.dayId)
           const dayName = matchingDay?.day.dayName ?? session.name ?? 'Workout'

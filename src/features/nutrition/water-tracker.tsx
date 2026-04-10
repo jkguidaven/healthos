@@ -6,10 +6,10 @@
  * A calm, focused mini-screen — one big number, three big quick-add
  * buttons, a custom override row, and a low-key reset affordance.
  *
- * Visual language mirrors the dashboard / nutrition / metrics screens:
- * soft 3-stop mint gradient background, blurred decorative circles,
- * rounded-3xl white cards with mint shadows, Poppins-only typography,
- * generous whitespace.
+ * Visual language: flat white page surface with rounded-3xl white
+ * cards separated by subtle slate borders. Mint accents stay on the
+ * hero number, progress bar, and primary CTA pill. Poppins-only
+ * typography, generous whitespace.
  *
  * Data flows through `useWaterLog`. All mutations go through the hook
  * so the dashboard mini-stat stays in sync when the user returns.
@@ -29,38 +29,14 @@ import {
   View,
 } from 'react-native'
 import { router } from 'expo-router'
-import { LinearGradient } from 'expo-linear-gradient'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 import { useWaterLog, type WaterLogData } from './use-water-log'
 
 // ─────────────────────────────────────────────
-// Shadow tokens — tuned to the mint surface so cards feel lifted.
+// Primary mint CTA glow — kept so the custom "Add" button still reads
+// as a slightly elevated action against the flat card surfaces.
 // ─────────────────────────────────────────────
-
-const HERO_CARD_SHADOW = {
-  shadowColor: '#1D9E75',
-  shadowOffset: { width: 0, height: 12 },
-  shadowOpacity: 0.18,
-  shadowRadius: 28,
-  elevation: 10,
-} as const
-
-const CARD_SHADOW = {
-  shadowColor: '#1D9E75',
-  shadowOffset: { width: 0, height: 8 },
-  shadowOpacity: 0.12,
-  shadowRadius: 20,
-  elevation: 6,
-} as const
-
-const SOFT_CARD_SHADOW = {
-  shadowColor: '#1D9E75',
-  shadowOffset: { width: 0, height: 4 },
-  shadowOpacity: 0.08,
-  shadowRadius: 14,
-  elevation: 3,
-} as const
 
 const PILL_SHADOW = {
   shadowColor: '#2BBF9E',
@@ -136,28 +112,7 @@ export function WaterTrackerScreen(): React.ReactElement {
   }, [setTotal])
 
   return (
-    <View className="flex-1 bg-mint-100">
-      {/* Atmospheric mint gradient — same 3-stop palette used app-wide. */}
-      <LinearGradient
-        colors={['#F0FBF7', '#D8F3E8', '#B5E8D5']}
-        locations={[0, 0.55, 1]}
-        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-      />
-
-      {/* Decorative soft circles for depth. */}
-      <View
-        className="absolute rounded-full bg-white/30"
-        style={{ width: 280, height: 280, top: -90, right: -110 }}
-      />
-      <View
-        className="absolute rounded-full bg-white/20"
-        style={{ width: 220, height: 220, top: 260, left: -100 }}
-      />
-      <View
-        className="absolute rounded-full bg-white/15"
-        style={{ width: 180, height: 180, bottom: 40, right: -60 }}
-      />
-
+    <View className="flex-1 bg-white">
       <SafeAreaView edges={['top']} className="flex-1">
         <ScrollView
           className="flex-1"
@@ -206,10 +161,7 @@ function TopBar({ onBack }: TopBarProps): React.ReactElement {
         hitSlop={12}
         className="active:opacity-70"
       >
-        <View
-          className="h-10 w-10 items-center justify-center rounded-full bg-white"
-          style={SOFT_CARD_SHADOW}
-        >
+        <View className="h-10 w-10 items-center justify-center rounded-full border border-slate-100 bg-white">
           <Text className="font-sans-semibold text-[18px] text-mint-700">
             ←
           </Text>
@@ -243,10 +195,7 @@ function HeroCard({ data }: HeroCardProps): React.ReactElement {
   const pct = data.pctComplete
 
   return (
-    <View
-      className="mt-6 items-center rounded-3xl bg-white p-8"
-      style={HERO_CARD_SHADOW}
-    >
+    <View className="mt-6 items-center rounded-3xl border border-slate-100 bg-white p-8">
       <Text className="font-sans-medium text-[12px] text-mint-600">
         Today
       </Text>
@@ -327,14 +276,8 @@ function QuickAddButton({
       onPress={() => onAdd(preset.ml)}
       className="active:opacity-85"
     >
-      <View
-        className="items-center rounded-2xl bg-white px-3 py-5"
-        style={CARD_SHADOW}
-      >
-        <View
-          className="h-12 w-12 items-center justify-center rounded-full bg-mint-50"
-          style={SOFT_CARD_SHADOW}
-        >
+      <View className="items-center rounded-2xl border border-slate-100 bg-white px-3 py-5">
+        <View className="h-12 w-12 items-center justify-center rounded-full bg-mint-50">
           <Text className="text-[22px]">{preset.icon}</Text>
         </View>
         <Text
@@ -370,10 +313,7 @@ function CustomAddRow({
   const canSubmit = parsed !== null
 
   return (
-    <View
-      className="mt-4 rounded-3xl bg-white p-5"
-      style={CARD_SHADOW}
-    >
+    <View className="mt-4 rounded-3xl border border-slate-100 bg-white p-5">
       <Text className="font-sans-medium text-[13px] text-slate-600">
         Or add a custom amount
       </Text>
@@ -427,10 +367,7 @@ interface ResetCardProps {
 
 function ResetCard({ onReset }: ResetCardProps): React.ReactElement {
   return (
-    <View
-      className="mt-4 flex-row items-center justify-between rounded-3xl bg-white p-5"
-      style={SOFT_CARD_SHADOW}
-    >
+    <View className="mt-4 flex-row items-center justify-between rounded-3xl border border-slate-100 bg-white p-5">
       <View className="flex-1 pr-3">
         <Text className="font-sans-medium text-[13px] text-slate-700">
           Made a mistake?

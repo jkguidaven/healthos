@@ -9,11 +9,11 @@
  *   2. Profile — edit profile, units, notifications
  *   3. Data    — export, remove key (destructive)
  *
- * Visual language matches the onboarding redesign: mint gradient background,
- * soft decorative circles, Poppins throughout, rounded-3xl white cards with
- * mint shadows. No editorial eyebrows — section titles live *inside* each
- * card in small slate-500 SemiBold 13px. Rows are full-width pressables
- * separated by faint slate-100 bottom borders.
+ * Visual language: flat white page surface, Poppins throughout,
+ * rounded-3xl white cards separated by a subtle slate border. Section
+ * titles live *inside* each card in small slate-500 SemiBold 13px.
+ * Rows are full-width pressables separated by faint slate-100 bottom
+ * borders.
  *
  * The raw API key never touches this component; the masked version is
  * produced by `useMaskedApiKey()`.
@@ -22,20 +22,11 @@
 import React, { useState } from 'react'
 import { Alert, Pressable, ScrollView, Switch, Text, View } from 'react-native'
 import { router } from 'expo-router'
-import { LinearGradient } from 'expo-linear-gradient'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { clearApiKey } from '@ai/api-key'
 import { useMaskedApiKey } from './use-api-key'
 
 type UnitPreference = 'metric' | 'imperial'
-
-const CARD_SHADOW = {
-  shadowColor: '#1D9E75',
-  shadowOffset: { width: 0, height: 8 },
-  shadowOpacity: 0.12,
-  shadowRadius: 22,
-  elevation: 6,
-} as const
 
 const MODEL_NAME = 'gemini-2.5-flash'
 const APP_VERSION = 'v0.1'
@@ -92,24 +83,7 @@ export function SettingsScreen(): React.ReactElement {
   }
 
   return (
-    <View className="flex-1 bg-mint-100">
-      {/* Soft mint gradient background */}
-      <LinearGradient
-        colors={['#F0FBF7', '#D8F3E8', '#B5E8D5']}
-        locations={[0, 0.5, 1]}
-        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-      />
-
-      {/* Decorative soft circles */}
-      <View
-        className="absolute rounded-full bg-white/30"
-        style={{ width: 280, height: 280, top: -90, right: -110 }}
-      />
-      <View
-        className="absolute rounded-full bg-white/20"
-        style={{ width: 220, height: 220, bottom: -60, left: -100 }}
-      />
-
+    <View className="flex-1 bg-white">
       <SafeAreaView edges={['top', 'bottom']} className="flex-1">
         {/* === TOP BAR === */}
         <View className="flex-row items-center justify-between px-6 pt-2">
@@ -250,7 +224,7 @@ interface SectionProps {
 
 function Section({ title, children }: SectionProps): React.ReactElement {
   return (
-    <View className="rounded-3xl bg-white px-5 pb-2 pt-5" style={CARD_SHADOW}>
+    <View className="rounded-3xl border border-slate-100 bg-white px-5 pb-2 pt-5">
       <Text className="mb-3 font-sans-semibold text-[13px] text-slate-500">
         {title}
       </Text>

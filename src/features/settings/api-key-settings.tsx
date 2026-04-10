@@ -4,8 +4,8 @@
  * Update Gemini API key screen — opened as a push from the settings screen.
  *
  * Simpler than the onboarding step: no progress dots, no "skip for now", no
- * hero explanation of what Gemini is. Just a focused update card. Same mint
- * gradient backdrop and component language as the rest of the app.
+ * hero explanation of what Gemini is. Just a focused update card on a flat
+ * white page, matching the main-app visual language.
  *
  * Flow:
  *   1. User pastes a new key
@@ -20,7 +20,6 @@
 import React, { useState } from 'react'
 import { Linking, Pressable, ScrollView, Text, View } from 'react-native'
 import { router } from 'expo-router'
-import { LinearGradient } from 'expo-linear-gradient'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Button } from '@components/ui/button'
 import { Input } from '@components/ui/input'
@@ -34,14 +33,6 @@ const ERROR_MESSAGES: Record<ValidationErrorCode, string> = {
   network_error: 'Check your connection and try again',
   rate_limit: 'Rate limit hit — try again in a moment',
 }
-
-const MINT_SHADOW = {
-  shadowColor: '#1D9E75',
-  shadowOffset: { width: 0, height: 4 },
-  shadowOpacity: 0.08,
-  shadowRadius: 16,
-  elevation: 3,
-} as const
 
 function ctaLabel(status: string): string {
   if (status === 'error') return 'Try again'
@@ -92,24 +83,7 @@ export function ApiKeySettings(): React.ReactElement {
     status === 'validating' || status === 'success' || key.trim().length === 0
 
   return (
-    <View className="flex-1 bg-mint-100">
-      {/* Soft mint gradient background */}
-      <LinearGradient
-        colors={['#F0FBF7', '#D8F3E8', '#B5E8D5']}
-        locations={[0, 0.5, 1]}
-        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-      />
-
-      {/* Decorative soft circles */}
-      <View
-        className="absolute rounded-full bg-white/30"
-        style={{ width: 280, height: 280, top: -90, right: -110 }}
-      />
-      <View
-        className="absolute rounded-full bg-white/20"
-        style={{ width: 200, height: 200, top: 200, left: -80 }}
-      />
-
+    <View className="flex-1 bg-white">
       <SafeAreaView edges={['top', 'bottom']} className="flex-1">
         <ScrollView
           className="flex-1"
@@ -159,10 +133,7 @@ export function ApiKeySettings(): React.ReactElement {
           </View>
 
           {/* === INFO CARD === */}
-          <View
-            className="mt-8 flex-row items-start gap-3 rounded-3xl bg-white p-5"
-            style={MINT_SHADOW}
-          >
+          <View className="mt-8 flex-row items-start gap-3 rounded-3xl border border-slate-100 bg-white p-5">
             <View className="h-8 w-8 items-center justify-center rounded-full bg-mint-100">
               <Text className="text-[15px]">🔒</Text>
             </View>
@@ -176,7 +147,7 @@ export function ApiKeySettings(): React.ReactElement {
           </View>
 
           {/* === INPUT CARD === */}
-          <View className="mt-4 rounded-3xl bg-white p-5" style={MINT_SHADOW}>
+          <View className="mt-4 rounded-3xl border border-slate-100 bg-white p-5">
             <Input
               label="New Gemini API key"
               value={key}

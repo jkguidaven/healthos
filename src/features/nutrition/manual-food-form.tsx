@@ -8,11 +8,11 @@
  * selector. Saves directly to the food_log table as `source: 'manual'`
  * and routes back to the nutrition tab.
  *
- * Visual language mirrors the rest of the mint design system:
- *   - 3-stop mint gradient background + decorative blurred circles
- *   - rounded-3xl white card with mint shadow
+ * Visual language:
+ *   - flat white page surface
+ *   - rounded-3xl white card with a subtle slate border
  *   - Poppins-only typography
- *   - rounded-full primary CTA, soft pill meal selector
+ *   - rounded-full primary CTA, mint pill meal selector
  *
  * No StyleSheet.create, no raw SQL, no `any`, no direct fetch.
  */
@@ -22,7 +22,6 @@ import { Alert, Pressable, ScrollView, Text, View } from 'react-native'
 import { router, useLocalSearchParams } from 'expo-router'
 import { useForm, Controller, type Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { LinearGradient } from 'expo-linear-gradient'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { z } from 'zod'
 
@@ -75,18 +74,6 @@ const DEFAULT_VALUES = (): ManualFoodFormInput => ({
   fatG: '',
   meal: defaultMealForNow(),
 })
-
-// ─────────────────────────────────────────────
-// Shadow tokens (matched to the mint surface)
-// ─────────────────────────────────────────────
-
-const HERO_CARD_SHADOW = {
-  shadowColor: '#1D9E75',
-  shadowOffset: { width: 0, height: 10 },
-  shadowOpacity: 0.15,
-  shadowRadius: 24,
-  elevation: 8,
-} as const
 
 // ─────────────────────────────────────────────
 // Meal selector configuration
@@ -209,24 +196,7 @@ export function ManualFoodForm(): React.ReactElement {
   }
 
   return (
-    <View className="flex-1 bg-mint-100">
-      {/* Atmospheric 3-stop mint gradient — same as the rest of the app. */}
-      <LinearGradient
-        colors={['#F0FBF7', '#D8F3E8', '#B5E8D5']}
-        locations={[0, 0.55, 1]}
-        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-      />
-
-      {/* Decorative soft circles for depth. */}
-      <View
-        className="absolute rounded-full bg-white/30"
-        style={{ width: 280, height: 280, top: -90, right: -110 }}
-      />
-      <View
-        className="absolute rounded-full bg-white/20"
-        style={{ width: 220, height: 220, bottom: -60, left: -90 }}
-      />
-
+    <View className="flex-1 bg-white">
       <SafeAreaView edges={['top', 'bottom']} className="flex-1">
         <ScrollView
           className="flex-1"
@@ -282,10 +252,7 @@ export function ManualFoodForm(): React.ReactElement {
           </View>
 
           {/* ── FORM CARD ────────────────────────── */}
-          <View
-            className="mt-8 rounded-3xl bg-white p-6"
-            style={HERO_CARD_SHADOW}
-          >
+          <View className="mt-8 rounded-3xl border border-slate-100 bg-white p-6">
             {/* Food name */}
             <Controller
               control={control}

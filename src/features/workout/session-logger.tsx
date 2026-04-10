@@ -9,10 +9,11 @@
  * runs a per-exercise rest timer, and persists everything through the
  * shared `use-session` hook.
  *
- * Visual language matches the rest of the app: mint gradient background
- * with a single subtle decorative circle, rounded-3xl white cards floating
- * on top, Poppins typography, and generous whitespace tuned for a data-dense
- * screen (calm, not loud).
+ * Visual language matches the rest of the app: flat white page surface
+ * with rounded-3xl white cards separated by subtle slate borders. The
+ * active exercise card keeps its mint border so it still reads as "now".
+ * The primary "Log" CTA keeps a soft mint glow. Poppins typography,
+ * generous whitespace tuned for a data-dense screen.
  *
  * This file is pure presentation. All state — session row, planned
  * exercises, logged sets, elapsed timer, active-exercise derivation — lives
@@ -42,7 +43,6 @@ import {
   View,
 } from 'react-native'
 import { router, useLocalSearchParams } from 'expo-router'
-import { LinearGradient } from 'expo-linear-gradient'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 import { Button } from '@components/ui/button'
@@ -50,42 +50,9 @@ import type { SessionSet } from '@db/schema'
 import { useSession, type ExerciseWithSets } from './use-session'
 
 // ─────────────────────────────────────────────
-// Shared shadow tokens — tuned for mint-on-mint cards. Inlined so the
-// screen reads as one self-contained visual module (matches workout-screen
-// and dashboard-screen conventions).
+// Primary mint CTA glow — the "log set" button still lifts off the flat
+// card surfaces so the main action feels intentionally elevated.
 // ─────────────────────────────────────────────
-
-const HERO_CARD_SHADOW = {
-  shadowColor: '#1D9E75',
-  shadowOffset: { width: 0, height: 12 },
-  shadowOpacity: 0.18,
-  shadowRadius: 28,
-  elevation: 10,
-} as const
-
-const CARD_SHADOW = {
-  shadowColor: '#1D9E75',
-  shadowOffset: { width: 0, height: 6 },
-  shadowOpacity: 0.1,
-  shadowRadius: 18,
-  elevation: 5,
-} as const
-
-const SOFT_CARD_SHADOW = {
-  shadowColor: '#1D9E75',
-  shadowOffset: { width: 0, height: 4 },
-  shadowOpacity: 0.08,
-  shadowRadius: 14,
-  elevation: 3,
-} as const
-
-const FAINT_SHADOW = {
-  shadowColor: '#1D9E75',
-  shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.05,
-  shadowRadius: 10,
-  elevation: 2,
-} as const
 
 const MINT_PILL_SHADOW = {
   shadowColor: '#2BBF9E',
@@ -289,8 +256,8 @@ export function SessionLogger(): React.ReactElement {
 }
 
 // ─────────────────────────────────────────────
-// Backdrop — mint gradient + one subtle decorative circle.
-// Lower-intensity than the welcome screen so the data feels calm.
+// Backdrop — flat white surface. Kept as a wrapper so every branch of
+// the session screen renders against the same calm page background.
 // ─────────────────────────────────────────────
 
 interface BackdropProps {
@@ -298,20 +265,7 @@ interface BackdropProps {
 }
 
 function Backdrop({ children }: BackdropProps): React.ReactElement {
-  return (
-    <View className="flex-1 bg-mint-100">
-      <LinearGradient
-        colors={['#F0FBF7', '#D8F3E8', '#B5E8D5']}
-        locations={[0, 0.55, 1]}
-        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-      />
-      <View
-        className="absolute rounded-full bg-white/25"
-        style={{ width: 260, height: 260, top: -90, right: -100 }}
-      />
-      {children}
-    </View>
-  )
+  return <View className="flex-1 bg-white">{children}</View>
 }
 
 // ─────────────────────────────────────────────
@@ -340,10 +294,7 @@ function TopBar({
         hitSlop={10}
         className="active:opacity-70"
       >
-        <View
-          className="h-10 w-10 items-center justify-center rounded-full bg-white/90"
-          style={SOFT_CARD_SHADOW}
-        >
+        <View className="h-10 w-10 items-center justify-center rounded-full border border-slate-100 bg-white">
           <Text className="font-sans-medium text-[18px] text-slate-600">
             {'\u00D7'}
           </Text>
@@ -359,10 +310,7 @@ function TopBar({
         </Text>
       </View>
 
-      <View
-        className="rounded-full bg-white/90 px-3 py-1.5"
-        style={SOFT_CARD_SHADOW}
-      >
+      <View className="rounded-full border border-slate-100 bg-white px-3 py-1.5">
         <Text className="font-sans-bold text-[15px] text-mint-600">
           {formatElapsed(elapsedSeconds)}
         </Text>
@@ -391,7 +339,7 @@ function WeekProgressStrip({
         <View
           key={weekNum}
           className={`h-1.5 flex-1 rounded-full ${
-            weekNum <= currentWeek ? 'bg-mint-500' : 'bg-white/70'
+            weekNum <= currentWeek ? 'bg-mint-500' : 'bg-mint-100'
           }`}
         />
       ))}
@@ -445,7 +393,7 @@ function DoneExerciseCard({
   const hasPr = entry.loggedSets.some((s) => s.isPr)
 
   return (
-    <View className="rounded-3xl bg-white p-5" style={CARD_SHADOW}>
+    <View className="rounded-3xl border border-slate-100 bg-white p-5">
       <View className="flex-row items-start justify-between">
         <View className="flex-1 pr-3">
           <Text
@@ -555,10 +503,7 @@ function ActiveExerciseCard({
   }, [weight, reps, onLog])
 
   return (
-    <View
-      className="rounded-3xl border-2 border-mint-400 bg-white p-5"
-      style={HERO_CARD_SHADOW}
-    >
+    <View className="rounded-3xl border-2 border-mint-400 bg-white p-5">
       <View className="flex-row items-start justify-between">
         <View className="flex-1 pr-3">
           <Text
@@ -662,10 +607,7 @@ function UpcomingExerciseCard({
 }: UpcomingExerciseCardProps): React.ReactElement {
   const { exercise } = entry
   return (
-    <View
-      className="rounded-3xl bg-white p-4 opacity-70"
-      style={FAINT_SHADOW}
-    >
+    <View className="rounded-3xl border border-slate-100 bg-white p-4 opacity-70">
       <View className="flex-row items-center justify-between">
         <View className="flex-1 pr-3">
           <Text
@@ -793,7 +735,7 @@ interface PendingSetCellProps {
 function PendingSetCell({ index }: PendingSetCellProps): React.ReactElement {
   return (
     <View
-      className="items-center rounded-2xl border-2 border-dashed border-slate-200 bg-white/50 px-3 py-2"
+      className="items-center rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 px-3 py-2"
       style={{ minWidth: SET_CELL_MIN_WIDTH }}
     >
       <Text className="font-sans-medium text-[12px] text-slate-400">
@@ -937,12 +879,9 @@ function FinishCard({
   }, [onFinish])
 
   return (
-    <View className="rounded-3xl bg-white p-6" style={HERO_CARD_SHADOW}>
+    <View className="rounded-3xl border border-slate-100 bg-white p-6">
       <View className="items-center">
-        <View
-          className="h-16 w-16 items-center justify-center rounded-full bg-mint-100"
-          style={SOFT_CARD_SHADOW}
-        >
+        <View className="h-16 w-16 items-center justify-center rounded-full bg-mint-100">
           <Text className="font-sans-bold text-[28px] text-mint-600">
             {'\u2713'}
           </Text>
@@ -981,10 +920,7 @@ function FinishCard({
 function LoadingState(): React.ReactElement {
   return (
     <View className="flex-1 items-center justify-center pb-24">
-      <View
-        className="h-14 w-14 items-center justify-center rounded-full bg-white"
-        style={SOFT_CARD_SHADOW}
-      >
+      <View className="h-14 w-14 items-center justify-center rounded-full border border-slate-100 bg-white">
         <View className="h-6 w-6 rounded-full bg-mint-300" />
       </View>
       <Text className="mt-4 font-sans text-[13px] text-slate-500">
@@ -1007,14 +943,8 @@ function ErrorState({
 }: ErrorStateProps): React.ReactElement {
   return (
     <View className="flex-1 items-center justify-center px-6">
-      <View
-        className="w-full items-center rounded-3xl bg-white p-6"
-        style={HERO_CARD_SHADOW}
-      >
-        <View
-          className="h-16 w-16 items-center justify-center rounded-full bg-mint-100"
-          style={SOFT_CARD_SHADOW}
-        >
+      <View className="w-full items-center rounded-3xl border border-slate-100 bg-white p-6">
+        <View className="h-16 w-16 items-center justify-center rounded-full bg-mint-100">
           <Text className="font-sans-bold text-[28px] text-mint-600">!</Text>
         </View>
         <Text

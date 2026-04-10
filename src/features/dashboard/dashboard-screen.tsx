@@ -4,10 +4,9 @@
  * Layer 4 — Home tab. The daily at-a-glance view across the four pillars:
  * nutrition, training, body, coach.
  *
- * Visual language mirrors the welcome screen and onboarding flow: mint
- * gradient background, soft decorative circles in the corners, rounded-3xl
- * white cards floating on top with mint shadows, Poppins typography, and
- * generous whitespace.
+ * Visual language: flat white page surface, rounded-3xl white cards
+ * separated by a subtle slate border, mint accents reserved for pills,
+ * CTAs, and status badges. Poppins typography, generous whitespace.
  *
  * Data is read through the `useDashboard` hook. While most of the underlying
  * food / workout / coach queries are stubbed (filled in during later build
@@ -21,40 +20,9 @@
 import React from 'react'
 import { Pressable, ScrollView, Text, View } from 'react-native'
 import { router } from 'expo-router'
-import { LinearGradient } from 'expo-linear-gradient'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { MacroBar } from '@components/ui/macro-bar'
 import { useDashboard, type DashboardData } from './use-dashboard'
-
-// ─────────────────────────────────────────────
-// Shared shadow tokens. Inlined here (rather than pulled from a global
-// styles module) so the dashboard stays self-contained and the shadow
-// feels "tuned" to these cards specifically.
-// ─────────────────────────────────────────────
-
-const HERO_CARD_SHADOW = {
-  shadowColor: '#1D9E75',
-  shadowOffset: { width: 0, height: 10 },
-  shadowOpacity: 0.15,
-  shadowRadius: 24,
-  elevation: 8,
-} as const
-
-const CARD_SHADOW = {
-  shadowColor: '#1D9E75',
-  shadowOffset: { width: 0, height: 6 },
-  shadowOpacity: 0.1,
-  shadowRadius: 18,
-  elevation: 5,
-} as const
-
-const SOFT_CARD_SHADOW = {
-  shadowColor: '#1D9E75',
-  shadowOffset: { width: 0, height: 4 },
-  shadowOpacity: 0.08,
-  shadowRadius: 14,
-  elevation: 3,
-} as const
 
 // ─────────────────────────────────────────────
 // Screen
@@ -64,28 +32,7 @@ export function DashboardScreen(): React.ReactElement {
   const { data, loading } = useDashboard()
 
   return (
-    <View className="flex-1 bg-mint-100">
-      {/* Atmospheric background — same 3-stop mint gradient as welcome/onboarding. */}
-      <LinearGradient
-        colors={['#F0FBF7', '#D8F3E8', '#B5E8D5']}
-        locations={[0, 0.55, 1]}
-        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-      />
-
-      {/* Decorative soft circles — large top-right, smaller middle-left. */}
-      <View
-        className="absolute rounded-full bg-white/30"
-        style={{ width: 280, height: 280, top: -90, right: -110 }}
-      />
-      <View
-        className="absolute rounded-full bg-white/20"
-        style={{ width: 220, height: 220, top: 260, left: -100 }}
-      />
-      <View
-        className="absolute rounded-full bg-white/15"
-        style={{ width: 180, height: 180, bottom: 40, right: -60 }}
-      />
-
+    <View className="flex-1 bg-white">
       <SafeAreaView edges={['top']} className="flex-1">
         <ScrollView
           className="flex-1"
@@ -135,10 +82,7 @@ function DashboardContent({
       />
 
       {/* === HERO: Calories + Protein ===================================== */}
-      <View
-        className="mt-6 rounded-3xl bg-white p-6"
-        style={HERO_CARD_SHADOW}
-      >
+      <View className="mt-6 rounded-3xl border border-slate-100 bg-white p-6">
         <View className="flex-row items-center justify-between">
           <Text className="font-sans-semibold text-[14px] text-slate-600">
             Today
@@ -193,7 +137,7 @@ function DashboardContent({
       </View>
 
       {/* === MACRO BREAKDOWN ============================================== */}
-      <View className="mt-4 rounded-3xl bg-white p-5" style={CARD_SHADOW}>
+      <View className="mt-4 rounded-3xl border border-slate-100 bg-white p-5">
         <Text className="font-sans-semibold text-[13px] text-slate-600">
           Macro breakdown
         </Text>
@@ -217,10 +161,7 @@ function DashboardContent({
         }}
         className="mt-4 active:opacity-90"
       >
-        <View
-          className="rounded-3xl bg-mint-50 p-5"
-          style={SOFT_CARD_SHADOW}
-        >
+        <View className="rounded-3xl border border-mint-100 bg-mint-50 p-5">
           <View className="flex-row items-center">
             <View className="h-8 w-8 items-center justify-center rounded-full bg-mint-200">
               <View className="h-3 w-3 rounded-full bg-mint-600" />
@@ -285,10 +226,7 @@ function DashboardContent({
         }}
         className="mt-4 active:opacity-90"
       >
-        <View
-          className="flex-row items-center justify-between rounded-3xl bg-white p-5"
-          style={CARD_SHADOW}
-        >
+        <View className="flex-row items-center justify-between rounded-3xl border border-slate-100 bg-white p-5">
           <View className="flex-1">
             <Text className="font-sans text-[12px] text-slate-500">
               Today&apos;s workout
@@ -360,10 +298,7 @@ function TopBar({
         }}
         className="active:opacity-80"
       >
-        <View
-          className="h-10 w-10 items-center justify-center rounded-full bg-mint-100"
-          style={SOFT_CARD_SHADOW}
-        >
+        <View className="h-10 w-10 items-center justify-center rounded-full bg-mint-100">
           <Text className="font-sans-semibold text-[14px] text-slate-700">
             {initial}
           </Text>
@@ -453,10 +388,7 @@ function MiniStatCard({
     valueTone === 'coral' ? 'text-brand-coral' : 'text-slate-900'
 
   const inner = (
-    <View
-      className="flex-1 rounded-3xl bg-white p-4"
-      style={SOFT_CARD_SHADOW}
-    >
+    <View className="flex-1 rounded-3xl border border-slate-100 bg-white p-4">
       <Text className="font-sans text-[11px] text-slate-500">{label}</Text>
       <Text
         className={`mt-1 font-sans-bold text-[22px] ${valueColor}`}
@@ -497,10 +429,7 @@ function LoadingState({
 }): React.ReactElement {
   return (
     <View className="flex-1 items-center justify-center pt-40">
-      <View
-        className="h-14 w-14 items-center justify-center rounded-full bg-white"
-        style={SOFT_CARD_SHADOW}
-      >
+      <View className="h-14 w-14 items-center justify-center rounded-full border border-slate-100 bg-white">
         <View className="h-6 w-6 rounded-full bg-mint-300" />
       </View>
       <Text className="mt-4 font-sans text-[13px] text-slate-500">
@@ -513,15 +442,9 @@ function LoadingState({
 function NotSetUpState(): React.ReactElement {
   return (
     <View className="flex-1 items-center justify-center pt-24">
-      <View
-        className="w-full rounded-3xl bg-white p-7"
-        style={HERO_CARD_SHADOW}
-      >
+      <View className="w-full rounded-3xl border border-slate-100 bg-white p-7">
         <View className="items-center">
-          <View
-            className="h-16 w-16 items-center justify-center rounded-full bg-mint-100"
-            style={SOFT_CARD_SHADOW}
-          >
+          <View className="h-16 w-16 items-center justify-center rounded-full bg-mint-100">
             <Text className="font-sans-bold text-[22px] text-mint-600">H</Text>
           </View>
 

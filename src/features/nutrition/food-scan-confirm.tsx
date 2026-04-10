@@ -20,9 +20,9 @@
  * Hard rules honoured:
  *   - No `any`, no raw SQL, no direct AI fetch
  *   - NativeWind Tailwind classes only, Poppins typography only
- *   - Friendly mint/soft/clean aesthetic — mint gradient background with
- *     decorative blurred circles, `rounded-3xl` white cards with soft mint
- *     shadows, primary mint CTA, rounded-full pills for selectors.
+ *   - Flat white page surface with `rounded-3xl` cards separated by a
+ *     subtle slate border. Mint stays as an accent colour on confidence
+ *     pills, selected selectors, the primary CTA, and progress bars.
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -39,7 +39,6 @@ import {
   View,
 } from 'react-native'
 import { router } from 'expo-router'
-import { LinearGradient } from 'expo-linear-gradient'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { StatusBar } from 'expo-status-bar'
 
@@ -195,24 +194,8 @@ function LoadedConfirm({
   }, [saveError])
 
   return (
-    <View className="flex-1 bg-mint-100">
+    <View className="flex-1 bg-white">
       <StatusBar style="dark" />
-
-      {/* Atmospheric background — mint gradient + soft blurred circles */}
-      <LinearGradient
-        colors={['#F0FBF7', '#D8F3E8', '#B5E8D5']}
-        locations={[0, 0.5, 1]}
-        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-      />
-      <View
-        className="absolute rounded-full bg-white/30"
-        style={{ width: 280, height: 280, top: -100, right: -110 }}
-      />
-      <View
-        className="absolute rounded-full bg-white/20"
-        style={{ width: 220, height: 220, bottom: -60, left: -80 }}
-      />
-
       <SafeAreaView edges={['top', 'bottom']} className="flex-1">
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -227,16 +210,7 @@ function LoadedConfirm({
               hitSlop={10}
               className="active:opacity-60"
             >
-              <View
-                className="h-10 w-10 items-center justify-center rounded-full bg-white/70"
-                style={{
-                  shadowColor: '#1D9E75',
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.12,
-                  shadowRadius: 12,
-                  elevation: 3,
-                }}
-              >
+              <View className="h-10 w-10 items-center justify-center rounded-full border border-slate-100 bg-white">
                 <Text
                   className="font-sans-medium text-[20px] text-slate-700"
                   style={{ marginTop: -2 }}
@@ -306,15 +280,10 @@ function LoadedConfirm({
               >
                 <View
                   className={`rounded-full px-4 py-2 ${
-                    editMode ? 'bg-mint-500' : 'bg-white'
+                    editMode
+                      ? 'bg-mint-500'
+                      : 'border border-slate-100 bg-white'
                   }`}
-                  style={{
-                    shadowColor: '#1D9E75',
-                    shadowOffset: { width: 0, height: 4 },
-                    shadowOpacity: 0.12,
-                    shadowRadius: 10,
-                    elevation: 3,
-                  }}
                 >
                   <Text
                     className={`font-sans-semibold text-[12px] ${
@@ -328,16 +297,7 @@ function LoadedConfirm({
             </View>
 
             {/* ═══ Macro grid card ═══ */}
-            <View
-              className="mt-5 rounded-3xl bg-white p-5"
-              style={{
-                shadowColor: '#1D9E75',
-                shadowOffset: { width: 0, height: 8 },
-                shadowOpacity: 0.14,
-                shadowRadius: 22,
-                elevation: 6,
-              }}
-            >
+            <View className="mt-5 rounded-3xl border border-slate-100 bg-white p-5">
               <View className="flex-row">
                 <MacroCell
                   label="Calories"
@@ -480,7 +440,7 @@ function LoadedConfirm({
 
             {/* ═══ Error row ═══ */}
             {saveErrorMessage ? (
-              <View className="mt-5 rounded-2xl bg-white px-4 py-3">
+              <View className="mt-5 rounded-2xl border border-slate-100 bg-white px-4 py-3">
                 <Text className="font-sans-medium text-[13px] text-brand-coral">
                   {saveErrorMessage}
                 </Text>
@@ -529,16 +489,7 @@ function PhotoCard({
   confidence,
 }: PhotoCardProps): React.ReactElement {
   return (
-    <View
-      className="rounded-3xl bg-white p-4"
-      style={{
-        shadowColor: '#1D9E75',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.16,
-        shadowRadius: 24,
-        elevation: 7,
-      }}
-    >
+    <View className="rounded-3xl border border-slate-100 bg-white p-4">
       <View
         className="overflow-hidden rounded-2xl bg-mint-50"
         style={{ height: 200 }}
@@ -696,16 +647,7 @@ function SelectorCard({
   children,
 }: SelectorCardProps): React.ReactElement {
   return (
-    <View
-      className="mt-4 rounded-3xl bg-white p-5"
-      style={{
-        shadowColor: '#1D9E75',
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.1,
-        shadowRadius: 18,
-        elevation: 4,
-      }}
-    >
+    <View className="mt-4 rounded-3xl border border-slate-100 bg-white p-5">
       <Text className="mb-3 font-sans-medium text-[12px] text-slate-500">
         {label}
       </Text>
@@ -786,34 +728,11 @@ function EmptyState(): React.ReactElement {
   }, [])
 
   return (
-    <View className="flex-1 bg-mint-100">
+    <View className="flex-1 bg-white">
       <StatusBar style="dark" />
-      <LinearGradient
-        colors={['#F0FBF7', '#D8F3E8', '#B5E8D5']}
-        locations={[0, 0.5, 1]}
-        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-      />
-      <View
-        className="absolute rounded-full bg-white/30"
-        style={{ width: 280, height: 280, top: -80, right: -100 }}
-      />
-      <View
-        className="absolute rounded-full bg-white/20"
-        style={{ width: 200, height: 200, top: 160, left: -80 }}
-      />
-
       <SafeAreaView edges={['top', 'bottom']} className="flex-1">
         <View className="flex-1 items-center justify-center px-6">
-          <View
-            className="h-24 w-24 items-center justify-center rounded-full bg-white"
-            style={{
-              shadowColor: '#1D9E75',
-              shadowOffset: { width: 0, height: 8 },
-              shadowOpacity: 0.18,
-              shadowRadius: 22,
-              elevation: 6,
-            }}
-          >
+          <View className="h-24 w-24 items-center justify-center rounded-full border border-slate-100 bg-white">
             <View className="h-16 w-16 items-center justify-center rounded-full bg-mint-400">
               <Text className="font-sans-bold text-[24px] text-white">?</Text>
             </View>

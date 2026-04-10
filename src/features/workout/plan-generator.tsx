@@ -16,9 +16,9 @@
  * ("Building your plan..."). On failure a friendly error card overlay
  * surfaces instead, with messages narrowed from the AI error .code.
  *
- * Visual language mirrors the onboarding screens: mint gradient background,
- * soft decorative circles, rounded-3xl white cards with mint shadows,
- * Poppins-only typography, rounded-full pill CTAs.
+ * Visual language: flat white page surface with rounded-3xl white cards
+ * separated by subtle slate borders. Mint fills the selected option
+ * chips and the primary CTA. Poppins-only typography.
  */
 
 import React, { useState } from 'react'
@@ -30,7 +30,6 @@ import {
   View,
 } from 'react-native'
 import { router } from 'expo-router'
-import { LinearGradient } from 'expo-linear-gradient'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Button } from '@components/ui/button'
 import {
@@ -39,24 +38,9 @@ import {
 } from '@features/workout/use-workout-plan'
 
 // ─────────────────────────────────────────────
-// Shared shadow styles — match the onboarding cards
+// The modal overlays (loading + error) still lift off the page with a
+// soft neutral drop shadow so the dim backdrop stays legible.
 // ─────────────────────────────────────────────
-
-const MINT_CARD_SHADOW = {
-  shadowColor: '#1D9E75',
-  shadowOffset: { width: 0, height: 4 },
-  shadowOpacity: 0.08,
-  shadowRadius: 16,
-  elevation: 3,
-} as const
-
-const SELECTED_ROW_SHADOW = {
-  shadowColor: '#2BBF9E',
-  shadowOffset: { width: 0, height: 6 },
-  shadowOpacity: 0.25,
-  shadowRadius: 14,
-  elevation: 5,
-} as const
 
 const OVERLAY_CARD_SHADOW = {
   shadowColor: '#000',
@@ -170,28 +154,7 @@ export function PlanGenerator(): React.ReactElement {
   const canGenerate = equipment.length > 0 && !isGenerating
 
   return (
-    <View className="flex-1 bg-mint-100">
-      {/* === Mint gradient background === */}
-      <LinearGradient
-        colors={['#F0FBF7', '#D8F3E8', '#B5E8D5']}
-        locations={[0, 0.5, 1]}
-        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-      />
-
-      {/* === Decorative circles === */}
-      <View
-        className="absolute rounded-full bg-white/30"
-        style={{ width: 280, height: 280, top: -90, right: -110 }}
-      />
-      <View
-        className="absolute rounded-full bg-white/20"
-        style={{ width: 220, height: 220, top: 240, left: -90 }}
-      />
-      <View
-        className="absolute rounded-full bg-white/25"
-        style={{ width: 180, height: 180, bottom: -40, right: -60 }}
-      />
-
+    <View className="flex-1 bg-white">
       <SafeAreaView edges={['top', 'bottom']} className="flex-1">
         <ScrollView
           className="flex-1"
@@ -206,8 +169,7 @@ export function PlanGenerator(): React.ReactElement {
               accessibilityRole="button"
               accessibilityLabel="Go back"
               hitSlop={12}
-              className="h-10 w-10 items-center justify-center rounded-full bg-white/70 active:opacity-80"
-              style={MINT_CARD_SHADOW}
+              className="h-10 w-10 items-center justify-center rounded-full border border-slate-100 bg-white active:opacity-80"
             >
               <Text
                 className="font-sans-semibold text-[20px] text-slate-700"
@@ -242,10 +204,7 @@ export function PlanGenerator(): React.ReactElement {
           </View>
 
           {/* === CARD 1 — Training split === */}
-          <View
-            className="mt-7 rounded-3xl bg-white p-5"
-            style={MINT_CARD_SHADOW}
-          >
+          <View className="mt-7 rounded-3xl border border-slate-100 bg-white p-5">
             <Text className="font-sans-medium text-[13px] text-slate-600">
               Training split
             </Text>
@@ -262,7 +221,6 @@ export function PlanGenerator(): React.ReactElement {
                     className={`rounded-2xl p-4 active:opacity-90 ${
                       selected ? 'bg-mint-500' : 'bg-slate-50'
                     }`}
-                    style={selected ? SELECTED_ROW_SHADOW : undefined}
                   >
                     <Text
                       className={`font-sans-semibold text-[15px] ${
@@ -285,10 +243,7 @@ export function PlanGenerator(): React.ReactElement {
           </View>
 
           {/* === CARD 2 — Days per week === */}
-          <View
-            className="mt-4 rounded-3xl bg-white p-5"
-            style={MINT_CARD_SHADOW}
-          >
+          <View className="mt-4 rounded-3xl border border-slate-100 bg-white p-5">
             <Text className="font-sans-medium text-[13px] text-slate-600">
               Days per week
             </Text>
@@ -305,7 +260,6 @@ export function PlanGenerator(): React.ReactElement {
                     className={`flex-1 items-center justify-center rounded-full px-4 py-3 active:opacity-90 ${
                       selected ? 'bg-mint-500' : 'bg-slate-50'
                     }`}
-                    style={selected ? SELECTED_ROW_SHADOW : undefined}
                   >
                     <Text
                       className={`font-sans-semibold text-[15px] ${
@@ -321,10 +275,7 @@ export function PlanGenerator(): React.ReactElement {
           </View>
 
           {/* === CARD 3 — Duration === */}
-          <View
-            className="mt-4 rounded-3xl bg-white p-5"
-            style={MINT_CARD_SHADOW}
-          >
+          <View className="mt-4 rounded-3xl border border-slate-100 bg-white p-5">
             <Text className="font-sans-medium text-[13px] text-slate-600">
               Plan duration
             </Text>
@@ -341,7 +292,6 @@ export function PlanGenerator(): React.ReactElement {
                     className={`rounded-full px-4 py-3 active:opacity-90 ${
                       selected ? 'bg-mint-500' : 'bg-slate-50'
                     }`}
-                    style={selected ? SELECTED_ROW_SHADOW : undefined}
                   >
                     <Text
                       className={`font-sans-semibold text-[13px] ${
@@ -357,10 +307,7 @@ export function PlanGenerator(): React.ReactElement {
           </View>
 
           {/* === CARD 4 — Equipment === */}
-          <View
-            className="mt-4 rounded-3xl bg-white p-5"
-            style={MINT_CARD_SHADOW}
-          >
+          <View className="mt-4 rounded-3xl border border-slate-100 bg-white p-5">
             <View className="flex-row items-center justify-between">
               <Text className="font-sans-medium text-[13px] text-slate-600">
                 Equipment available
@@ -382,7 +329,6 @@ export function PlanGenerator(): React.ReactElement {
                     className={`rounded-full px-3 py-2 active:opacity-90 ${
                       selected ? 'bg-mint-500' : 'bg-slate-50'
                     }`}
-                    style={selected ? SELECTED_ROW_SHADOW : undefined}
                   >
                     <Text
                       className={`font-sans-medium text-[12px] ${

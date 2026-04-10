@@ -7,9 +7,9 @@
  * trend chart, tape measurements, a plain-English recomp signal, and a
  * quick link to progress photos.
  *
- * Visual language matches the onboarding screens: mint gradient background
- * with soft decorative circles, Poppins-only typography, rounded-3xl white
- * cards with mint shadows, rounded-full pill CTAs.
+ * Visual language: flat white page with rounded-3xl white cards
+ * separated by subtle slate borders. Mint accents on pills, badges, and
+ * the "Log today" CTA. Poppins-only typography, generous whitespace.
  *
  * Layer 4 (screen). All data comes from `useMetrics()`; this file is pure
  * presentation with light formatting logic.
@@ -18,31 +18,15 @@
 import React from 'react'
 import { Pressable, ScrollView, Text, View } from 'react-native'
 import { router } from 'expo-router'
-import { LinearGradient } from 'expo-linear-gradient'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useMetrics, type MetricsData } from './use-metrics'
 import { WeightChart } from './weight-chart'
 import type { BodyMetric } from '@db/schema'
 
 // ─────────────────────────────────────────────
-// Shared shadow tokens — keep visual weight consistent across cards.
+// Shared shadow tokens — the primary "Log today" pill keeps a soft mint
+// glow so the main CTA still feels slightly elevated.
 // ─────────────────────────────────────────────
-
-const CARD_SHADOW = {
-  shadowColor: '#1D9E75',
-  shadowOffset: { width: 0, height: 8 },
-  shadowOpacity: 0.12,
-  shadowRadius: 20,
-  elevation: 6,
-} as const
-
-const SOFT_CARD_SHADOW = {
-  shadowColor: '#1D9E75',
-  shadowOffset: { width: 0, height: 4 },
-  shadowOpacity: 0.08,
-  shadowRadius: 14,
-  elevation: 3,
-} as const
 
 const PILL_SHADOW = {
   shadowColor: '#2BBF9E',
@@ -76,24 +60,7 @@ export function MetricsScreen(): React.ReactElement {
   }
 
   return (
-    <View className="flex-1 bg-mint-100">
-      {/* Mint gradient background — same language as the onboarding stack. */}
-      <LinearGradient
-        colors={['#F0FBF7', '#D8F3E8', '#B5E8D5']}
-        locations={[0, 0.5, 1]}
-        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-      />
-
-      {/* Decorative soft circles for atmospheric depth */}
-      <View
-        className="absolute rounded-full bg-white/30"
-        style={{ width: 280, height: 280, top: -90, right: -110 }}
-      />
-      <View
-        className="absolute rounded-full bg-white/20"
-        style={{ width: 220, height: 220, top: 220, left: -90 }}
-      />
-
+    <View className="flex-1 bg-white">
       <SafeAreaView edges={['top']} className="flex-1">
         <ScrollView
           className="flex-1"
@@ -113,10 +80,7 @@ export function MetricsScreen(): React.ReactElement {
           </View>
 
           {/* === 30-DAY WEIGHT TREND === */}
-          <View
-            className="mt-3 rounded-3xl bg-white p-5"
-            style={CARD_SHADOW}
-          >
+          <View className="mt-3 rounded-3xl border border-slate-100 bg-white p-5">
             <View className="flex-row items-center justify-between">
               <Text className="font-sans-semibold text-[14px] text-slate-600">
                 30-day trend
@@ -149,10 +113,7 @@ export function MetricsScreen(): React.ReactElement {
             accessibilityLabel="Open progress photos"
             className="mt-3 active:opacity-90"
           >
-            <View
-              className="flex-row items-center justify-between rounded-3xl bg-white p-5"
-              style={CARD_SHADOW}
-            >
+            <View className="flex-row items-center justify-between rounded-3xl border border-slate-100 bg-white p-5">
               <View className="flex-row items-center gap-3">
                 <View className="h-9 w-9 items-center justify-center rounded-full bg-mint-100">
                   <Text className="text-[16px]">📷</Text>
@@ -227,10 +188,7 @@ function WeightTile({ data }: TileProps): React.ReactElement {
   const delta = data.weightDeltaWeek
 
   return (
-    <View
-      className="flex-1 rounded-3xl bg-white p-5"
-      style={CARD_SHADOW}
-    >
+    <View className="flex-1 rounded-3xl border border-slate-100 bg-white p-5">
       <Text className="font-sans-medium text-[12px] text-slate-500">
         Weight
       </Text>
@@ -261,10 +219,7 @@ function BodyFatTile({ data }: TileProps): React.ReactElement {
   const delta = data.bodyFatDeltaMonth
 
   return (
-    <View
-      className="flex-1 rounded-3xl bg-white p-5"
-      style={CARD_SHADOW}
-    >
+    <View className="flex-1 rounded-3xl border border-slate-100 bg-white p-5">
       <Text className="font-sans-medium text-[12px] text-slate-500">
         Body fat
       </Text>
@@ -352,10 +307,7 @@ function MeasurementsCard({
   const hasSecondRow = chest !== null || thigh !== null
 
   return (
-    <View
-      className="mt-3 rounded-3xl bg-white p-5"
-      style={CARD_SHADOW}
-    >
+    <View className="mt-3 rounded-3xl border border-slate-100 bg-white p-5">
       <View className="flex-row items-baseline">
         <Text className="font-sans-semibold text-[14px] text-slate-600">
           Measurements
@@ -424,10 +376,7 @@ function RecompSignalCard({
       : 'Log a weigh-in and a tape measurement to see your recomp signal.'
 
   return (
-    <View
-      className="mt-3 rounded-3xl bg-mint-50 p-5"
-      style={SOFT_CARD_SHADOW}
-    >
+    <View className="mt-3 rounded-3xl border border-mint-100 bg-mint-50 p-5">
       <View className="flex-row items-center gap-3">
         <View className="h-8 w-8 items-center justify-center rounded-full bg-mint-100">
           <Text className="text-[14px]">✓</Text>

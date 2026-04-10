@@ -9,9 +9,9 @@
  * itself. Saving upserts today's body_metric row and routes back to the
  * body tab.
  *
- * Visual language: mint gradient + soft decorative circles + rounded-3xl
- * white cards with mint shadows + Poppins. Mirrors the welcome / onboarding
- * screens so the whole flow feels cohesive.
+ * Visual language: flat white page surface + rounded-3xl white cards
+ * separated by a subtle slate border + Poppins. Mint stays as an accent
+ * colour on the live result number, badges, and CTAs.
  *
  * All logic lives in `use-body-fat.ts`. This component is pure presentation
  * glue.
@@ -20,41 +20,12 @@
 import React, { useEffect } from 'react'
 import { Pressable, ScrollView, Text, View } from 'react-native'
 import { router } from 'expo-router'
-import { LinearGradient } from 'expo-linear-gradient'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Button } from '@components/ui/button'
 import { Input } from '@components/ui/input'
 import { BODY_FAT_CATEGORY_LABEL } from '@formulas/body-fat'
 import { useProfileStore } from '@/stores/profile-store'
 import { useBodyFat } from './use-body-fat'
-
-// ─────────────────────────────────────────────
-// Shared shadow objects
-// ─────────────────────────────────────────────
-
-const CARD_SHADOW = {
-  shadowColor: '#1D9E75',
-  shadowOffset: { width: 0, height: 8 },
-  shadowOpacity: 0.15,
-  shadowRadius: 24,
-  elevation: 8,
-} as const
-
-const RESULT_SHADOW = {
-  shadowColor: '#2BBF9E',
-  shadowOffset: { width: 0, height: 12 },
-  shadowOpacity: 0.28,
-  shadowRadius: 28,
-  elevation: 10,
-} as const
-
-const TOP_BUTTON_SHADOW = {
-  shadowColor: '#1D9E75',
-  shadowOffset: { width: 0, height: 4 },
-  shadowOpacity: 0.08,
-  shadowRadius: 16,
-  elevation: 3,
-} as const
 
 // ─────────────────────────────────────────────
 // Screen
@@ -77,24 +48,7 @@ export function BodyFatForm(): React.ReactElement | null {
   const isFemale = profile.sex === 'female'
 
   return (
-    <View className="flex-1 bg-mint-100">
-      {/* Soft mint gradient background */}
-      <LinearGradient
-        colors={['#F0FBF7', '#D8F3E8', '#B5E8D5']}
-        locations={[0, 0.5, 1]}
-        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-      />
-
-      {/* Decorative soft circles */}
-      <View
-        className="absolute rounded-full bg-white/30"
-        style={{ width: 280, height: 280, top: -90, right: -110 }}
-      />
-      <View
-        className="absolute rounded-full bg-white/20"
-        style={{ width: 220, height: 220, bottom: -60, left: -90 }}
-      />
-
+    <View className="flex-1 bg-white">
       <SafeAreaView edges={['top', 'bottom']} className="flex-1">
         <ScrollView
           className="flex-1"
@@ -113,8 +67,7 @@ export function BodyFatForm(): React.ReactElement | null {
               accessibilityRole="button"
               accessibilityLabel="Go back"
               hitSlop={12}
-              className="h-11 w-11 items-center justify-center rounded-full bg-white/70 active:opacity-80"
-              style={TOP_BUTTON_SHADOW}
+              className="h-11 w-11 items-center justify-center rounded-full border border-slate-100 bg-white active:opacity-80"
             >
               <Text
                 className="font-sans-semibold text-[20px] text-mint-700"
@@ -149,7 +102,7 @@ export function BodyFatForm(): React.ReactElement | null {
           </View>
 
           {/* === FORM CARD === */}
-          <View className="mt-7 rounded-3xl bg-white p-6" style={CARD_SHADOW}>
+          <View className="mt-7 rounded-3xl border border-slate-100 bg-white p-6">
             <View className="gap-4">
               <Input
                 label="Waist (cm)"
@@ -200,7 +153,7 @@ export function BodyFatForm(): React.ReactElement | null {
           </View>
 
           {/* === INSTRUCTION CARD === */}
-          <View className="mt-4 flex-row items-start gap-3 rounded-2xl bg-mint-50 p-4">
+          <View className="mt-4 flex-row items-start gap-3 rounded-2xl border border-mint-100 bg-mint-50 p-4">
             <View className="h-6 w-6 items-center justify-center rounded-full bg-mint-100">
               <Text className="text-[12px]">{'\uD83D\uDCCF'}</Text>
             </View>
@@ -215,10 +168,7 @@ export function BodyFatForm(): React.ReactElement | null {
 
           {/* === LIVE RESULT CARD === */}
           {liveResult ? (
-            <View
-              className="mt-4 rounded-3xl bg-white p-6"
-              style={RESULT_SHADOW}
-            >
+            <View className="mt-4 rounded-3xl border border-slate-100 bg-white p-6">
               <Text className="text-center font-sans-medium text-[13px] text-slate-500">
                 Estimated body fat
               </Text>
