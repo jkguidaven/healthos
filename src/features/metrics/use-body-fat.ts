@@ -17,11 +17,12 @@
  * fallback) so the user doesn't retype it every day.
  *
  * The screen component is dumb — it only calls into this hook. No
- * raw SQL, no direct fetch, no `any`.
+ * raw SQL, no direct fetch, no `any`. The save path is a plain async
+ * function (matching use-water-log / use-food-log) — the previous
+ * useMutation indirection swallowed errors silently in some cases.
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useMutation } from '@tanstack/react-query'
 import { useSQLiteContext } from 'expo-sqlite'
 import { drizzle } from 'drizzle-orm/expo-sqlite'
 import * as schema from '@db/schema'
@@ -52,7 +53,7 @@ export interface UseBodyFatReturn {
   /** True when the save button should be enabled (i.e. weight is valid). */
   canSave: boolean
 
-  save: () => void
+  save: () => Promise<void>
   isSaving: boolean
   saveError: Error | null
   saveSuccess: boolean
@@ -74,6 +75,10 @@ export function useBodyFat(): UseBodyFatReturn {
     neckCm: '',
     hipCm: '',
   })
+
+  const [isSaving, setIsSaving] = useState<boolean>(false)
+  const [saveError, setSaveError] = useState<Error | null>(null)
+  const [saveSuccess, setSaveSuccess] = useState<boolean>(false)
 
   // Pre-fill weight (and the optional fields) from the most recent
   // body_metric row so the user doesn't have to retype yesterday's
@@ -102,6 +107,10 @@ export function useBodyFat(): UseBodyFatReturn {
 
   const setField = useCallback(
     (field: keyof BodyFatFormValues, value: string): void => {
+      // Clear stale success/error state on first edit so the user
+      // sees a clean slate before retrying.
+      setSaveError(null)
+      setSaveSuccess(false)
       setValues((prev) => ({ ...prev, [field]: value }))
     },
     [],
@@ -138,27 +147,50 @@ export function useBodyFat(): UseBodyFatReturn {
     return !Number.isNaN(weight) && weight > 0
   }, [values.weightKg])
 
-  // Save mutation — upserts today's row via the Drizzle query helper.
-  const mutation = useMutation<void, Error, void>({
-    mutationFn: async (): Promise<void> => {
-      if (!profile)
-        throw new Error('Profile missing — finish onboarding first')
+  /**
+   * Persist today's check-in. Plain async (no react-query) so callers
+   * can `await save()` and surface errors directly. Always passes the
+   * full set of body_metric columns — explicit null for fields the
+   * user didn't fill — so Drizzle's onConflictDoUpdate doesn't see
+   * `undefined` and silently skip columns.
+   */
+  const save = useCallback(async (): Promise<void> => {
+    if (!profile) {
+      const err = new Error('Profile missing — finish onboarding first')
+      setSaveError(err)
+      // eslint-disable-next-line no-console
+      console.warn('useBodyFat.save:', err.message)
+      return
+    }
 
-      const weight = parseFloat(values.weightKg)
-      if (Number.isNaN(weight) || weight <= 0) {
-        throw new Error('Enter a valid weight')
-      }
+    const weight = parseFloat(values.weightKg)
+    if (Number.isNaN(weight) || weight <= 0) {
+      const err = new Error('Enter a valid weight')
+      setSaveError(err)
+      // eslint-disable-next-line no-console
+      console.warn('useBodyFat.save:', err.message)
+      return
+    }
 
+    setIsSaving(true)
+    setSaveError(null)
+
+    try {
       const today = new Date().toISOString().split('T')[0]
       const waist = parseOptional(values.waistCm)
       const neck = parseOptional(values.neckCm)
       const hip = parseOptional(values.hipCm)
 
-      await upsertBodyMetric(db, {
+      const saved = await upsertBodyMetric(db, {
         profileId: profile.id,
         date: today,
         weightKg: weight,
         waistCm: waist,
+        // Optional measurements the daily check-in form doesn't collect —
+        // pass explicit null so onConflictDoUpdate doesn't see undefined.
+        chestCm: null,
+        armCm: null,
+        thighCm: null,
         hipCm: profile.sex === 'female' ? hip : null,
         navyWaistCm: waist,
         navyNeckCm: neck,
@@ -166,20 +198,34 @@ export function useBodyFat(): UseBodyFatReturn {
         leanMassKg: liveResult?.leanMassKg ?? null,
         fatMassKg: liveResult?.fatMassKg ?? null,
       })
-    },
-  })
+
+      // eslint-disable-next-line no-console
+      console.log('useBodyFat.save: persisted body_metric', {
+        id: saved?.id ?? null,
+        date: saved?.date ?? today,
+        weightKg: weight,
+      })
+
+      setSaveSuccess(true)
+    } catch (e) {
+      const err = e instanceof Error ? e : new Error('Could not save check-in')
+      // eslint-disable-next-line no-console
+      console.warn('useBodyFat.save: failed', err)
+      setSaveError(err)
+    } finally {
+      setIsSaving(false)
+    }
+  }, [db, profile, values, liveResult])
 
   return {
     values,
     setField,
     liveResult,
     canSave,
-    save: () => {
-      mutation.mutate()
-    },
-    isSaving: mutation.isPending,
-    saveError: mutation.error,
-    saveSuccess: mutation.isSuccess,
+    save,
+    isSaving,
+    saveError,
+    saveSuccess,
   }
 }
 

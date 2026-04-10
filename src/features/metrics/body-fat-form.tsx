@@ -111,6 +111,24 @@ export function BodyFatForm(): React.ReactElement | null {
             </Text>
           </View>
 
+          {/* === SAVE ERROR BANNER (prominent — sits right under the headline
+              so a failed save is impossible to miss). */}
+          {saveError ? (
+            <View className="mt-5 flex-row items-start gap-3 rounded-2xl border border-brand-coral/30 bg-brand-coral/10 p-4">
+              <View className="h-6 w-6 items-center justify-center rounded-full bg-brand-coral/20">
+                <Text className="font-sans-semibold text-[12px] text-brand-coral">
+                  !
+                </Text>
+              </View>
+              <Text
+                className="flex-1 font-sans text-[13px] text-brand-coral"
+                style={{ lineHeight: 19 }}
+              >
+                Couldn’t save your check-in: {saveError.message}
+              </Text>
+            </View>
+          ) : null}
+
           {/* === REQUIRED: WEIGH-IN CARD === */}
           <View className="mt-7 rounded-3xl border border-slate-100 bg-white p-6">
             <View className="mb-4 flex-row items-center justify-between">
@@ -274,12 +292,6 @@ export function BodyFatForm(): React.ReactElement | null {
             </View>
           ) : null}
 
-          {saveError ? (
-            <Text className="mt-4 text-center font-sans text-[13px] text-brand-coral">
-              {saveError.message}
-            </Text>
-          ) : null}
-
           {/* === SPACER === */}
           <View className="flex-1" />
 
@@ -292,7 +304,9 @@ export function BodyFatForm(): React.ReactElement | null {
             </View>
             <View className="flex-1">
               <Button
-                onPress={save}
+                onPress={() => {
+                  void save()
+                }}
                 loading={isSaving}
                 disabled={!canSave || isSaving}
               >
