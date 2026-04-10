@@ -44,6 +44,11 @@ export interface SaveScannedFoodArgs {
   meal: ScannedFoodMeal
   /** Portion multiplier — e.g. 0.5, 1, 1.5, 2. Applied to all macros. */
   portion: number
+  /**
+   * Which flow produced this result. Maps to the food_log.source enum.
+   * Defaults to 'ai_scan' so existing AI callers don't need to change.
+   */
+  source?: 'ai_scan' | 'barcode'
 }
 
 export interface UseFoodScannerReturn {
@@ -98,7 +103,7 @@ export function useFoodScanner(): UseFoodScannerReturn {
 
   // ─── Step 2: save ──────────────────────────────────────────
   const saveMutation = useMutation<void, Error, SaveScannedFoodArgs>({
-    mutationFn: async ({ result, meal, portion }) => {
+    mutationFn: async ({ result, meal, portion, source = 'ai_scan' }) => {
       if (!profile) {
         throw new Error('No profile loaded — cannot save food log entry')
       }
@@ -113,9 +118,10 @@ export function useFoodScanner(): UseFoodScannerReturn {
         carbsG:      roundOneDecimal(result.carbs_g * portion),
         fatG:        roundOneDecimal(result.fat_g * portion),
         servingDesc: result.serving_description,
-        source:      'ai_scan',
-        confidence:  result.confidence,
-        aiNotes:     result.notes ?? null,
+        source,
+        // Barcode lookups carry no AI confidence — only store it for AI scans.
+        confidence:  source === 'ai_scan' ? result.confidence : null,
+        aiNotes:     source === 'ai_scan' ? (result.notes ?? null) : null,
       }
 
       await insertFoodLogEntry(db, entry)

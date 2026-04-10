@@ -261,8 +261,12 @@ function DashboardContent({
           value={`${formatLiters(data.todayWaterMl)} L`}
           sublabel={`of ${formatLiters(data.waterTarget)} L`}
           valueTone={
-            data.todayWaterMl < data.waterTarget ? 'coral' : 'default'
+            data.todayWaterMl < data.waterTarget * 0.5 ? 'coral' : 'default'
           }
+          onPress={() => {
+            router.push('/(tabs)/food/water')
+          }}
+          accessibilityLabel="Open water tracker"
         />
       </View>
 
@@ -429,6 +433,8 @@ interface MiniStatCardProps {
   value: string
   sublabel: string
   valueTone?: 'default' | 'coral'
+  onPress?: () => void
+  accessibilityLabel?: string
 }
 
 function MiniStatCard({
@@ -436,11 +442,13 @@ function MiniStatCard({
   value,
   sublabel,
   valueTone = 'default',
+  onPress,
+  accessibilityLabel,
 }: MiniStatCardProps): React.ReactElement {
   const valueColor =
     valueTone === 'coral' ? 'text-brand-coral' : 'text-slate-900'
 
-  return (
+  const inner = (
     <View
       className="flex-1 rounded-3xl bg-white p-4"
       style={SOFT_CARD_SHADOW}
@@ -457,6 +465,21 @@ function MiniStatCard({
       </Text>
     </View>
   )
+
+  if (onPress != null) {
+    return (
+      <Pressable
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={accessibilityLabel ?? label}
+        className="flex-1 active:opacity-90"
+      >
+        {inner}
+      </Pressable>
+    )
+  }
+
+  return inner
 }
 
 // ─────────────────────────────────────────────

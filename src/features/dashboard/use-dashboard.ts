@@ -20,6 +20,7 @@ import { drizzle } from 'drizzle-orm/expo-sqlite'
 import * as schema from '@db/schema'
 import { getProfile } from '@db/queries/profile'
 import { getLatestBodyMetric } from '@db/queries/metrics'
+import { getTodayWaterLog } from '@db/queries/water-log'
 import { useProfileStore } from '@/stores/profile-store'
 
 // ─────────────────────────────────────────────
@@ -185,7 +186,10 @@ export function useDashboard(): UseDashboardResult {
           })
         }
 
-        const latestMetric = await getLatestBodyMetric(db, profile.id)
+        const [latestMetric, waterRow] = await Promise.all([
+          getLatestBodyMetric(db, profile.id),
+          getTodayWaterLog(db, profile.id),
+        ])
 
         if (cancelled) return
 
@@ -204,7 +208,7 @@ export function useDashboard(): UseDashboardResult {
           todayWeightKg: latestMetric?.weightKg ?? null,
           workoutsThisWeek: 0,
           workoutTarget: WORKOUT_TARGET_PER_WEEK,
-          todayWaterMl: 0,
+          todayWaterMl: waterRow?.amountMl ?? 0,
           waterTarget: WATER_TARGET_ML,
           coachMessage: pickCoachMessage(true, now.getDate()),
           nextWorkoutName: null,

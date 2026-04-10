@@ -28,6 +28,7 @@ import {
   type NutritionByMeal,
   type NutritionData,
 } from './use-food-log'
+import { useWaterLog, type WaterLogData } from './use-water-log'
 
 // ─────────────────────────────────────────────
 // Shared shadow tokens — tuned to the mint surface so cards feel lifted.
@@ -89,15 +90,18 @@ const MEAL_ORDER: readonly MealConfig[] = [
 
 export function NutritionScreen(): React.ReactElement {
   const { data, deleteEntry } = useFoodLog()
+  const { data: waterData } = useWaterLog()
 
   const handleOpenScan = useCallback((): void => {
     router.push('/(tabs)/food/scan')
   }, [])
 
   const handleOpenManual = useCallback((): void => {
-    // Manual entry screen is tracked in #38. Log a placeholder for now.
-    // eslint-disable-next-line no-console
-    console.log('manual')
+    router.push('/(tabs)/food/manual')
+  }, [])
+
+  const handleOpenWater = useCallback((): void => {
+    router.push('/(tabs)/food/water')
   }, [])
 
   const handleEditEntry = useCallback((entry: FoodLogEntry): void => {
@@ -164,6 +168,8 @@ export function NutritionScreen(): React.ReactElement {
           <ScanCtaCard onPress={handleOpenScan} />
 
           <TodaySummaryCard data={data} />
+
+          <WaterShortcutCard data={waterData} onPress={handleOpenWater} />
 
           <FoodLogList
             byMeal={data.byMeal}
@@ -359,6 +365,70 @@ function SummaryMetric({
         {goalText}
       </Text>
     </View>
+  )
+}
+
+// ─────────────────────────────────────────────
+// Water shortcut card — compact tappable row that routes to the
+// dedicated water tracker screen. Shows today's progress inline so
+// the user can glance at hydration without leaving the food tab.
+// ─────────────────────────────────────────────
+
+interface WaterShortcutCardProps {
+  data: WaterLogData
+  onPress: () => void
+}
+
+function WaterShortcutCard({
+  data,
+  onPress,
+}: WaterShortcutCardProps): React.ReactElement {
+  const litersToday = (data.todayMl / 1000).toFixed(1)
+  const litersGoal = (data.goalMl / 1000).toFixed(1)
+  const pct = data.pctComplete
+
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel="Open water tracker"
+      className="mt-4 active:opacity-90"
+    >
+      <View
+        className="flex-row items-center rounded-3xl bg-white p-5"
+        style={CARD_SHADOW}
+      >
+        <View
+          className="h-11 w-11 items-center justify-center rounded-full bg-mint-50"
+          style={SOFT_CARD_SHADOW}
+        >
+          <Text className="text-[18px]">💧</Text>
+        </View>
+
+        <View className="ml-4 flex-1">
+          <Text
+            className="font-sans-semibold text-[14px] text-slate-900"
+            style={{ letterSpacing: -0.2 }}
+          >
+            Water
+          </Text>
+          <Text className="mt-0.5 font-sans text-[12px] text-slate-500">
+            {`${litersToday} of ${litersGoal} L today`}
+          </Text>
+
+          <View className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-mint-50">
+            <View
+              className="h-full rounded-full bg-mint-500"
+              style={{ width: `${pct}%` }}
+            />
+          </View>
+        </View>
+
+        <Text className="ml-3 font-sans-semibold text-[20px] text-mint-600">
+          →
+        </Text>
+      </View>
+    </Pressable>
   )
 }
 

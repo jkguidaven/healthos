@@ -11,6 +11,25 @@ export default function FoodLayout() {
           animation: 'fade',
         }}
       />
+      <Stack.Screen
+        name="manual"
+        options={{
+          animation: 'slide_from_right',
+        }}
+      />
+      <Stack.Screen
+        name="confirm"
+        options={{
+          presentation: 'fullScreenModal',
+          animation: 'slide_from_bottom',
+        }}
+      />
+      <Stack.Screen
+        name="water"
+        options={{
+          animation: 'slide_from_right',
+        }}
+      />
     </Stack>
   )
 }
