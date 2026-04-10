@@ -581,13 +581,16 @@ function RecompSignalCard({
       ? data.recompSignal.message
       : 'Log a weigh-in and a tape measurement to see your recomp signal.'
 
+  // Per the wireframes (Tab 4 §5) the recomp signal lives on an amber
+  // surface so it stands out from the surrounding mint cards as the
+  // "interpret what the numbers mean" callout, not just another data tile.
   return (
-    <View className="mt-3 rounded-3xl border border-mint-100 bg-mint-50 p-5">
+    <View className="mt-3 rounded-3xl border border-amber-100 bg-amber-50 p-5">
       <View className="flex-row items-center gap-3">
-        <View className="h-8 w-8 items-center justify-center rounded-full bg-mint-100">
-          <Text className="text-[14px]">✓</Text>
+        <View className="h-8 w-8 items-center justify-center rounded-full bg-amber-100">
+          <Ionicons name="sparkles" size={14} color="#C77416" />
         </View>
-        <Text className="font-sans-semibold text-[13px] text-mint-700">
+        <Text className="font-sans-semibold text-[13px] text-brand-amber">
           Recomp signal
         </Text>
       </View>
