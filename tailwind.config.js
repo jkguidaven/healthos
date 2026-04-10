@@ -34,6 +34,19 @@ module.exports = {
           800: '#2A3636',
           900: '#1A2727', // Primary text
         },
+        // Soft purple scale used by the AI coach surfaces. Tonally matches
+        // brand-purple (#534AB7) but with low-saturation tints for the
+        // "weekly summary" card and "regenerate" link, per Tab 5 wireframe.
+        purple: {
+          50: '#F2F1FB',
+          100: '#E4E2F6',
+          200: '#C5C0EB',
+          300: '#9B93DC',
+          400: '#7669CB',
+          500: '#534AB7', // = brand-purple
+          600: '#403896',
+          700: '#2E2872',
+        },
         // Brand pillar colors retained for data
         brand: {
           green: '#1D9E75',
