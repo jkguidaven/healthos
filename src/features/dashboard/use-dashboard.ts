@@ -24,7 +24,9 @@ import { getLatestBodyMetric } from '@db/queries/metrics'
 import { getTodayMacroSummary } from '@db/queries/food-log'
 import { getTodayWaterLog } from '@db/queries/water-log'
 import { getWeekSessionCount } from '@db/queries/workouts'
+import { getTodayCoachEntry } from '@db/queries/coach'
 import { calculateBMR, calculateTDEE } from '@/lib/formulas/tdee'
+import { deriveCoachHint, type CoachHintTone } from '@formulas/coach-hint'
 import { useProfileStore } from '@/stores/profile-store'
 import type { MacroGoal } from '@/lib/formulas/macros'
 
@@ -69,8 +71,11 @@ export interface DashboardData {
   todayWaterMl: number
   waterTarget: number
 
-  // AI coach — stubbed until Phase 5 coach queries land
+  // AI coach — derived live by deriveCoachHint() so it reflects today's
+  // logged data and re-evaluates whenever the dashboard refocuses.
   coachMessage: string
+  /** Tone bucket for the dashboard pill (win/nudge/watch/neutral). */
+  coachTone: CoachHintTone
 
   // Next workout — stubbed until Phase 3 plan queries land
   nextWorkoutName: string | null
@@ -85,19 +90,9 @@ export interface UseDashboardResult {
 }
 
 // ─────────────────────────────────────────────
-// Static copy — picked over hardcoding in the screen so the hook is the
-// single source of truth for "what does the dashboard say today".
+// Tunables — kept here so the hook is the single source of truth for
+// "what does the dashboard target this user against".
 // ─────────────────────────────────────────────
-
-const COACH_MESSAGES_WELCOME = [
-  'Welcome in. Your daily insight will appear here once you start logging.',
-  'Log your first meal to unlock your daily coach note.',
-] as const
-
-const COACH_MESSAGES_RETURNING = [
-  'Steady wins. Keep logging and your coach will spot the patterns worth knowing.',
-  'A new day. Start with breakfast and let the rest follow.',
-] as const
 
 const WATER_TARGET_ML = 2_500
 const WORKOUT_TARGET_PER_WEEK = 4
@@ -119,11 +114,6 @@ export function formatTodayLabel(now: Date): string {
     month: 'long',
     day: 'numeric',
   })
-}
-
-function pickCoachMessage(hasProfile: boolean, seed: number): string {
-  const bucket = hasProfile ? COACH_MESSAGES_RETURNING : COACH_MESSAGES_WELCOME
-  return bucket[seed % bucket.length]
 }
 
 // ─────────────────────────────────────────────
@@ -156,6 +146,21 @@ export function useDashboard(): UseDashboardResult {
 
           if (profile == null) {
             if (cancelled) return
+            const noProfileHint = deriveCoachHint({
+              hour: now.getHours(),
+              hasProfile: false,
+              goalCalories: 0,
+              goalProteinG: 0,
+              todayCalories: 0,
+              todayProteinG: 0,
+              mealsLogged: 0,
+              todayWaterMl: 0,
+              waterTarget: WATER_TARGET_ML,
+              workoutsThisWeek: 0,
+              workoutTarget: WORKOUT_TARGET_PER_WEEK,
+              dayOfWeek: now.getDay(),
+              cachedCoachMessage: null,
+            })
             setData({
               greeting,
               profileName: 'there',
@@ -175,7 +180,8 @@ export function useDashboard(): UseDashboardResult {
               workoutTarget: WORKOUT_TARGET_PER_WEEK,
               todayWaterMl: 0,
               waterTarget: WATER_TARGET_ML,
-              coachMessage: pickCoachMessage(false, now.getDate()),
+              coachMessage: noProfileHint.message,
+              coachTone: noProfileHint.tone,
               nextWorkoutName: null,
               todayLabel,
             })
@@ -213,14 +219,39 @@ export function useDashboard(): UseDashboardResult {
             })
           }
 
-          const [latestMetric, waterRow, macroSummary, weekWorkouts] = await Promise.all([
-            getLatestBodyMetric(db, profile.id),
-            getTodayWaterLog(db, profile.id),
-            getTodayMacroSummary(db, profile.id),
-            getWeekSessionCount(db, profile.id),
-          ])
+          // Pull macros + workouts + water + latest metric in parallel.
+          // Also read the cached AI coach entry — used as a richer
+          // fallback when no urgent rule fires in deriveCoachHint().
+          const todayIso = new Date().toISOString().split('T')[0]
+          const [latestMetric, waterRow, macroSummary, weekWorkouts, cachedCoach] =
+            await Promise.all([
+              getLatestBodyMetric(db, profile.id),
+              getTodayWaterLog(db, profile.id),
+              getTodayMacroSummary(db, profile.id),
+              getWeekSessionCount(db, profile.id),
+              getTodayCoachEntry(db, todayIso),
+            ])
 
           if (cancelled) return
+
+          // Derive the dashboard "Daily insight" tile from real data.
+          // Re-runs on every focus, so logging food / water / workouts
+          // and switching back to Home gets a fresh hint instantly.
+          const hint = deriveCoachHint({
+            hour: now.getHours(),
+            hasProfile: true,
+            goalCalories: profile.goalCalories,
+            goalProteinG: profile.goalProteinG,
+            todayCalories: macroSummary.calories,
+            todayProteinG: macroSummary.proteinG,
+            mealsLogged: macroSummary.mealsLogged,
+            todayWaterMl: waterRow?.amountMl ?? 0,
+            waterTarget: WATER_TARGET_ML,
+            workoutsThisWeek: weekWorkouts,
+            workoutTarget: WORKOUT_TARGET_PER_WEEK,
+            dayOfWeek: now.getDay(),
+            cachedCoachMessage: cachedCoach?.message ?? null,
+          })
 
           setData({
             greeting,
@@ -241,7 +272,8 @@ export function useDashboard(): UseDashboardResult {
             workoutTarget: WORKOUT_TARGET_PER_WEEK,
             todayWaterMl: waterRow?.amountMl ?? 0,
             waterTarget: WATER_TARGET_ML,
-            coachMessage: pickCoachMessage(true, now.getDate()),
+            coachMessage: hint.message,
+            coachTone: hint.tone,
             nextWorkoutName: null,
             todayLabel,
           })

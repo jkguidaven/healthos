@@ -23,6 +23,7 @@ import { router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { MacroBar } from '@components/ui/macro-bar'
+import type { CoachHintTone } from '@formulas/coach-hint'
 import { useDashboard, type DashboardData } from './use-dashboard'
 
 // ─────────────────────────────────────────────
@@ -161,7 +162,12 @@ function DashboardContent({
         </View>
       </View>
 
-      {/* === AI COACH ===================================================== */}
+      {/* === AI COACH =====================================================
+          The tile is a "tooltip" — single sentence derived live by
+          deriveCoachHint() from today's logged data, falling back to the
+          cached coach_entry message when nothing urgent applies. The
+          tone bucket drives the dot + frame colour so the user can read
+          it at a glance. Tap → full Coach tab. */}
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Open coach"
@@ -170,22 +176,10 @@ function DashboardContent({
         }}
         className="mt-4 active:opacity-90"
       >
-        <View className="rounded-3xl border border-mint-100 bg-mint-50 p-5">
-          <View className="flex-row items-center">
-            <View className="h-8 w-8 items-center justify-center rounded-full bg-mint-200">
-              <View className="h-3 w-3 rounded-full bg-mint-600" />
-            </View>
-            <Text className="ml-3 font-sans-medium text-[12px] text-mint-700">
-              Daily insight
-            </Text>
-          </View>
-          <Text
-            className="mt-3 font-sans text-[14px] text-slate-700"
-            style={{ lineHeight: 20 }}
-          >
-            {data.coachMessage}
-          </Text>
-        </View>
+        <DailyInsightCard
+          message={data.coachMessage}
+          tone={data.coachTone}
+        />
       </Pressable>
 
       {/* === MINI STATS =================================================== */}
@@ -558,6 +552,87 @@ function MiniStatCard({
   }
 
   return inner
+}
+
+// ─────────────────────────────────────────────
+// Daily insight tile — small, single-sentence "tooltip" derived live
+// from logged data by the coach-hint formula. Tone drives the colour
+// bucket so a warning stands out from a win without redesigning the
+// whole tile per state.
+// ─────────────────────────────────────────────
+
+const COACH_TONE_STYLES: Record<
+  CoachHintTone,
+  {
+    container: string
+    iconBg: string
+    dot: string
+    label: string
+    labelText: string
+  }
+> = {
+  win: {
+    container: 'border-mint-100 bg-mint-50',
+    iconBg: 'bg-mint-200',
+    dot: 'bg-mint-600',
+    label: 'Daily insight · win',
+    labelText: 'text-mint-700',
+  },
+  nudge: {
+    container: 'border-purple-100 bg-purple-50',
+    iconBg: 'bg-purple-100',
+    dot: 'bg-purple-500',
+    label: 'Daily insight · nudge',
+    labelText: 'text-purple-600',
+  },
+  watch: {
+    container: 'border-amber-100 bg-amber-50',
+    iconBg: 'bg-amber-100',
+    dot: 'bg-brand-amber',
+    label: 'Daily insight · check in',
+    labelText: 'text-brand-amber',
+  },
+  neutral: {
+    container: 'border-mint-100 bg-mint-50',
+    iconBg: 'bg-mint-200',
+    dot: 'bg-mint-600',
+    label: 'Daily insight',
+    labelText: 'text-mint-700',
+  },
+}
+
+interface DailyInsightCardProps {
+  message: string
+  tone: CoachHintTone
+}
+
+function DailyInsightCard({
+  message,
+  tone,
+}: DailyInsightCardProps): React.ReactElement {
+  const palette = COACH_TONE_STYLES[tone]
+  return (
+    <View className={`rounded-3xl border p-5 ${palette.container}`}>
+      <View className="flex-row items-center">
+        <View
+          className={`h-8 w-8 items-center justify-center rounded-full ${palette.iconBg}`}
+        >
+          <View className={`h-3 w-3 rounded-full ${palette.dot}`} />
+        </View>
+        <Text
+          className={`ml-3 font-sans-medium text-[12px] ${palette.labelText}`}
+        >
+          {palette.label}
+        </Text>
+      </View>
+      <Text
+        className="mt-3 font-sans text-[14px] text-slate-700"
+        style={{ lineHeight: 20 }}
+      >
+        {message}
+      </Text>
+    </View>
+  )
 }
 
 // ─────────────────────────────────────────────
