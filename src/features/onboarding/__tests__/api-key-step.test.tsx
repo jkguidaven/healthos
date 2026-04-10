@@ -48,9 +48,9 @@ describe('ApiKeyStep', () => {
   it('renders title, subtitle, info, CTA, and skip link', () => {
     const { getByText } = renderWithProviders(<ApiKeyStep />)
 
-    expect(getByText('Connect Claude AI')).toBeTruthy()
+    expect(getByText('Connect Gemini')).toBeTruthy()
     expect(
-      getByText('Powers food scanning, workout plans, and your daily coach.'),
+      getByText(/Powers food scanning, workout plans, and your daily coach\./),
     ).toBeTruthy()
     expect(getByText(/Your key is stored securely/)).toBeTruthy()
     expect(getByText('Validate & save')).toBeTruthy()
@@ -72,17 +72,14 @@ describe('ApiKeyStep', () => {
       <ApiKeyStep />,
     )
 
-    fireEvent.changeText(
-      getByPlaceholderText('sk-ant-api03-…'),
-      'sk-ant-api03-test',
-    )
+    fireEvent.changeText(getByPlaceholderText('AIza…'), 'AIza-test-key')
     fireEvent.press(getByText('Validate & save'))
 
     await waitFor(() => {
-      expect(mockedValidate).toHaveBeenCalledWith('sk-ant-api03-test')
+      expect(mockedValidate).toHaveBeenCalledWith('AIza-test-key')
     })
     await waitFor(() => {
-      expect(mockedSave).toHaveBeenCalledWith('sk-ant-api03-test')
+      expect(mockedSave).toHaveBeenCalledWith('AIza-test-key')
     })
     await waitFor(() => {
       expect(getByText("Key validated — you're all set")).toBeTruthy()
@@ -102,11 +99,11 @@ describe('ApiKeyStep', () => {
       <ApiKeyStep />,
     )
 
-    fireEvent.changeText(getByPlaceholderText('sk-ant-api03-…'), 'bad-key')
+    fireEvent.changeText(getByPlaceholderText('AIza…'), 'bad-key')
     fireEvent.press(getByText('Validate & save'))
 
     await waitFor(() => {
-      expect(getByText('Key was rejected by Anthropic')).toBeTruthy()
+      expect(getByText('Key was rejected by Google AI Studio')).toBeTruthy()
     })
     expect(mockedSave).not.toHaveBeenCalled()
     expect(mockedReplace).not.toHaveBeenCalled()
@@ -122,7 +119,7 @@ describe('ApiKeyStep', () => {
       <ApiKeyStep />,
     )
 
-    fireEvent.changeText(getByPlaceholderText('sk-ant-api03-…'), 'sk-ant-test')
+    fireEvent.changeText(getByPlaceholderText('AIza…'), 'AIza-test')
     fireEvent.press(getByText('Validate & save'))
 
     await waitFor(() => {
@@ -140,7 +137,7 @@ describe('ApiKeyStep', () => {
       <ApiKeyStep />,
     )
 
-    fireEvent.changeText(getByPlaceholderText('sk-ant-api03-…'), 'sk-ant-test')
+    fireEvent.changeText(getByPlaceholderText('AIza…'), 'AIza-test')
     fireEvent.press(getByText('Validate & save'))
 
     await waitFor(() => {
@@ -155,13 +152,13 @@ describe('ApiKeyStep', () => {
     expect(getByText('Hide key')).toBeTruthy()
   })
 
-  it('opens the Anthropic console when the get-key link is tapped', () => {
+  it('opens Google AI Studio when the get-key link is tapped', () => {
     const spy = jest.spyOn(Linking, 'openURL').mockResolvedValueOnce(true)
     const { getByText } = renderWithProviders(<ApiKeyStep />)
 
-    fireEvent.press(getByText('Get a free key at console.anthropic.com →'))
+    fireEvent.press(getByText('Get a free key at aistudio.google.com →'))
 
-    expect(spy).toHaveBeenCalledWith('https://console.anthropic.com/settings/keys')
+    expect(spy).toHaveBeenCalledWith('https://aistudio.google.com/apikey')
     spy.mockRestore()
   })
 

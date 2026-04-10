@@ -8,18 +8,15 @@ import { Input } from '@components/ui/input'
 import { clearApiKey, saveApiKey, validateApiKey } from '@ai/api-key'
 
 type ValidationStatus = 'idle' | 'validating' | 'success' | 'error'
-type ErrorCode = 'invalid_key' | 'low_balance' | 'network_error' | 'rate_limit'
+type ErrorCode = 'invalid_key' | 'network_error' | 'rate_limit'
 
 const ERROR_MESSAGES: Record<ErrorCode, string> = {
-  invalid_key: 'Key was rejected by Anthropic',
-  low_balance:
-    'Your key works, but your Anthropic account has no credits. Add some to start using AI features.',
+  invalid_key: 'Key was rejected by Google AI Studio',
   network_error: 'Check your connection and try again',
   rate_limit: 'Rate limit hit — try again in a moment',
 }
 
-const CONSOLE_URL = 'https://console.anthropic.com/settings/keys'
-const BILLING_URL = 'https://console.anthropic.com/settings/billing'
+const STUDIO_URL = 'https://aistudio.google.com/apikey'
 
 const MINT_SHADOW = {
   shadowColor: '#1D9E75',
@@ -68,8 +65,8 @@ export function ApiKeyStep(): React.ReactElement {
     router.replace('/(tabs)')
   }
 
-  const handleOpenConsole = (): void => {
-    void Linking.openURL(CONSOLE_URL)
+  const handleOpenStudio = (): void => {
+    void Linking.openURL(STUDIO_URL)
   }
 
   const handleToggleShow = (): void => {
@@ -138,13 +135,14 @@ export function ApiKeyStep(): React.ReactElement {
               className="font-sans-bold text-[28px] text-slate-900"
               style={{ lineHeight: 34, letterSpacing: -0.5 }}
             >
-              Connect Claude AI
+              Connect Gemini
             </Text>
             <Text
               className="mt-3 font-sans text-[15px] text-slate-600"
               style={{ lineHeight: 22 }}
             >
               Powers food scanning, workout plans, and your daily coach.
+              Free tier — no credit card required.
             </Text>
           </View>
 
@@ -161,7 +159,7 @@ export function ApiKeyStep(): React.ReactElement {
               style={{ lineHeight: 19 }}
             >
               Your key is stored securely on this device using the system
-              keychain. It&apos;s only ever sent to Anthropic&apos;s servers.
+              keychain. It&apos;s only ever sent to Google&apos;s servers.
             </Text>
           </View>
 
@@ -171,10 +169,10 @@ export function ApiKeyStep(): React.ReactElement {
             style={MINT_SHADOW}
           >
             <Input
-              label="Anthropic API key"
+              label="Gemini API key"
               value={key}
               onChangeText={setKey}
-              placeholder="sk-ant-api03-…"
+              placeholder="AIza…"
               secureTextEntry={!showKey}
             />
 
@@ -191,13 +189,13 @@ export function ApiKeyStep(): React.ReactElement {
               </Pressable>
 
               <Pressable
-                onPress={handleOpenConsole}
+                onPress={handleOpenStudio}
                 accessibilityRole="link"
                 className="active:opacity-60"
                 hitSlop={8}
               >
                 <Text className="font-sans-medium text-[13px] text-mint-600">
-                  Get a free key at console.anthropic.com →
+                  Get a free key at aistudio.google.com →
                 </Text>
               </Pressable>
             </View>
@@ -217,27 +215,7 @@ export function ApiKeyStep(): React.ReactElement {
             </View>
           ) : null}
 
-          {status === 'error' && errorCode === 'low_balance' ? (
-            <View className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4">
-              <View className="flex-row items-start gap-3">
-                <View className="mt-1 h-2.5 w-2.5 rounded-full bg-amber-500" />
-                <Text className="flex-1 font-sans-medium text-[13px] text-amber-800">
-                  {ERROR_MESSAGES.low_balance}
-                </Text>
-              </View>
-              <Pressable
-                onPress={() => {
-                  void Linking.openURL(BILLING_URL)
-                }}
-                accessibilityRole="link"
-                className="mt-3 self-start rounded-full bg-amber-500 px-4 py-2 active:opacity-80"
-              >
-                <Text className="font-sans-semibold text-[12px] text-white">
-                  Open billing settings →
-                </Text>
-              </Pressable>
-            </View>
-          ) : status === 'error' && errorCode ? (
+          {status === 'error' && errorCode ? (
             <View className="mt-4 flex-row items-center gap-3 rounded-2xl border border-red-200 bg-red-50 p-4">
               <View className="h-2.5 w-2.5 rounded-full bg-red-500" />
               <Text className="flex-1 font-sans-medium text-[13px] text-red-700">

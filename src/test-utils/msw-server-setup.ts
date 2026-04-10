@@ -1,5 +1,5 @@
 /**
- * Helper for tests that need to mock Claude API calls.
+ * Helper for tests that need to mock Gemini API calls.
  *
  * Usage:
  *   import { setupMswServer } from '@/test-utils/msw-server-setup'
