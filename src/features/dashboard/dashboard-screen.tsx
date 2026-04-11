@@ -220,46 +220,88 @@ function DashboardContent({
       </View>
 
       {/* === TODAY'S WORKOUT CTA ========================================== */}
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Start today's workout"
-        onPress={() => {
-          // Workout tab is still a placeholder — wire up in Phase 3.
-          // eslint-disable-next-line no-console
-          console.log('start workout')
-        }}
-        className="mt-4 active:opacity-90"
-      >
-        <View className="flex-row items-center justify-between rounded-3xl border border-slate-100 bg-white p-5">
-          <View className="flex-1">
-            <Text className="font-sans text-[12px] text-slate-500">
-              Today&apos;s workout
-            </Text>
-            <Text className="mt-1 font-sans-semibold text-[16px] text-slate-900">
-              {data.nextWorkoutName ?? 'Rest day'}
-            </Text>
-          </View>
-
-          <View
-            className="h-11 flex-row items-center rounded-full bg-mint-500 px-5"
-            style={{
-              shadowColor: '#2BBF9E',
-              shadowOffset: { width: 0, height: 6 },
-              shadowOpacity: 0.3,
-              shadowRadius: 12,
-              elevation: 5,
-            }}
-          >
-            <Text className="font-sans-semibold text-[13px] text-white">
-              Start
-            </Text>
-            <Text className="ml-2 font-sans-semibold text-[15px] text-white">
-              {'\u2192'}
-            </Text>
-          </View>
-        </View>
-      </Pressable>
+      <TodaysWorkoutCta
+        name={data.nextWorkoutName}
+        planId={data.nextWorkoutPlanId}
+        dayId={data.nextWorkoutDayId}
+      />
     </View>
+  )
+}
+
+// ─────────────────────────────────────────────
+// Today's workout CTA — when a plan exists, tapping jumps straight into
+// the session logger for the next un-done day. Otherwise it routes to
+// the workout tab so the user can generate a plan.
+// ─────────────────────────────────────────────
+
+interface TodaysWorkoutCtaProps {
+  name: string | null
+  planId: number | null
+  dayId: number | null
+}
+
+function TodaysWorkoutCta({
+  name,
+  planId,
+  dayId,
+}: TodaysWorkoutCtaProps): React.ReactElement {
+  const hasSession = planId != null && dayId != null
+  const title = name ?? (hasSession ? 'Rest day' : 'No plan yet')
+  const buttonLabel = hasSession ? 'Start' : 'Plan'
+
+  const handlePress = (): void => {
+    if (hasSession) {
+      router.push({
+        pathname: '/(tabs)/workout/session',
+        params: { planId: String(planId), dayId: String(dayId) },
+      })
+      return
+    }
+    router.push('/(tabs)/workout')
+  }
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={
+        hasSession ? `Start ${name ?? 'today\u2019s workout'}` : 'Open workout tab'
+      }
+      onPress={handlePress}
+      className="mt-4 active:opacity-90"
+    >
+      <View className="flex-row items-center justify-between rounded-3xl border border-slate-100 bg-white p-5">
+        <View className="flex-1 pr-3">
+          <Text className="font-sans text-[12px] text-slate-500">
+            Today&apos;s workout
+          </Text>
+          <Text
+            className="mt-1 font-sans-semibold text-[16px] text-slate-900"
+            numberOfLines={1}
+          >
+            {title}
+          </Text>
+        </View>
+
+        <View
+          className="h-11 flex-row items-center rounded-full bg-mint-500 px-5"
+          style={{
+            shadowColor: '#2BBF9E',
+            shadowOffset: { width: 0, height: 6 },
+            shadowOpacity: 0.3,
+            shadowRadius: 12,
+            elevation: 5,
+          }}
+        >
+          <Text className="font-sans-semibold text-[13px] text-white">
+            {buttonLabel}
+          </Text>
+          <Text className="ml-2 font-sans-semibold text-[15px] text-white">
+            {'\u2192'}
+          </Text>
+        </View>
+      </View>
+    </Pressable>
   )
 }
 

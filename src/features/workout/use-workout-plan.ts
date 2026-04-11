@@ -41,7 +41,7 @@ import {
   type WorkoutOverview,
   type WorkoutDayExercises,
 } from '@ai/prompts/workout-plan'
-import { APIKeyInvalidError } from '@ai/types'
+import { AIParseError, APIKeyInvalidError } from '@ai/types'
 import { useApiKey } from '@ai/use-api-key'
 import { saveGeneratedPlan, type SavePlanInput } from '@db/queries/workouts'
 import * as schema from '@db/schema'
@@ -87,8 +87,11 @@ function normaliseOverview(raw: unknown): WorkoutOverview {
   const trainingDays = parsed.days
     .filter((d) => !isRestDay(d))
     .map((d) => ({
-      day_name: d.day_name,
-      muscle_groups: d.muscle_groups,
+      day_name: d.day_name.slice(0, 50),
+      // Clamp muscle_groups to the schema bound (1-6). Gemini occasionally
+      // returns 7+ entries for a full-body day, which otherwise blows up
+      // WorkoutOverviewSchema.parse below with "Too big" on muscle_groups.
+      muscle_groups: d.muscle_groups.slice(0, 6),
       estimated_duration_minutes: Math.max(20, Math.min(120, Math.round(d.estimated_duration_minutes))),
     }))
 
@@ -98,14 +101,24 @@ function normaliseOverview(raw: unknown): WorkoutOverview {
   const expectedCount = Math.min(6, Math.max(1, parsed.days_per_week))
   const trimmed = trainingDays.slice(0, Math.max(expectedCount, 1))
 
-  return WorkoutOverviewSchema.parse({
-    plan_name: parsed.plan_name,
-    plan_rationale: parsed.plan_rationale,
-    split_type: parsed.split_type,
-    weeks_total: parsed.weeks_total,
-    days_per_week: parsed.days_per_week,
-    days: trimmed,
-  })
+  try {
+    return WorkoutOverviewSchema.parse({
+      plan_name: parsed.plan_name.slice(0, 100),
+      plan_rationale: parsed.plan_rationale.slice(0, 500),
+      split_type: parsed.split_type,
+      weeks_total: Math.max(4, Math.min(16, Math.round(parsed.weeks_total))),
+      days_per_week: Math.max(2, Math.min(6, Math.round(parsed.days_per_week))),
+      days: trimmed,
+    })
+  } catch (err) {
+    // Surface as AIParseError so the error overlay renders the friendly
+    // "Couldn't read the response" copy instead of Zod's stringified
+    // issues array.
+    console.warn('[useWorkoutPlan] Overview failed strict validation:', err)
+    throw new AIParseError(
+      err instanceof Error ? err.message : 'Overview failed final validation',
+    )
+  }
 }
 
 /**

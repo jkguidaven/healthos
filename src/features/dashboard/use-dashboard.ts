@@ -23,7 +23,12 @@ import { getProfile } from '@db/queries/profile'
 import { getLatestBodyMetric } from '@db/queries/metrics'
 import { getTodayMacroSummary } from '@db/queries/food-log'
 import { getTodayWaterLog } from '@db/queries/water-log'
-import { getWeekSessionCount } from '@db/queries/workouts'
+import {
+  getActivePlan,
+  getPlanDays,
+  getRecentSessions,
+  getWeekSessionCount,
+} from '@db/queries/workouts'
 import { getTodayCoachEntry } from '@db/queries/coach'
 import { calculateBMR, calculateTDEE } from '@/lib/formulas/tdee'
 import { deriveCoachHint, type CoachHintTone } from '@formulas/coach-hint'
@@ -77,8 +82,13 @@ export interface DashboardData {
   /** Tone bucket for the dashboard pill (win/nudge/watch/neutral). */
   coachTone: CoachHintTone
 
-  // Next workout — stubbed until Phase 3 plan queries land
+  // Next workout — derived from the active plan. `nextWorkoutName` is the
+  // day name (or null if there's no plan); the plan + day IDs let the
+  // dashboard CTA navigate straight into the session logger. When the
+  // IDs are null the CTA falls back to opening the workout tab.
   nextWorkoutName: string | null
+  nextWorkoutPlanId: number | null
+  nextWorkoutDayId: number | null
 
   // Today's date — formatted for the sub-header
   todayLabel: string
@@ -183,6 +193,8 @@ export function useDashboard(): UseDashboardResult {
               coachMessage: noProfileHint.message,
               coachTone: noProfileHint.tone,
               nextWorkoutName: null,
+              nextWorkoutPlanId: null,
+              nextWorkoutDayId: null,
               todayLabel,
             })
             setLoading(false)
@@ -222,15 +234,49 @@ export function useDashboard(): UseDashboardResult {
           // Pull macros + workouts + water + latest metric in parallel.
           // Also read the cached AI coach entry — used as a richer
           // fallback when no urgent rule fires in deriveCoachHint().
+          // The active plan + recent sessions feed the "Today's workout"
+          // CTA below; plan days are loaded in a follow-up call because
+          // they depend on the plan id.
           const todayIso = new Date().toISOString().split('T')[0]
-          const [latestMetric, waterRow, macroSummary, weekWorkouts, cachedCoach] =
-            await Promise.all([
-              getLatestBodyMetric(db, profile.id),
-              getTodayWaterLog(db, profile.id),
-              getTodayMacroSummary(db, profile.id),
-              getWeekSessionCount(db, profile.id),
-              getTodayCoachEntry(db, todayIso),
-            ])
+          const [
+            latestMetric,
+            waterRow,
+            macroSummary,
+            weekWorkouts,
+            cachedCoach,
+            activePlan,
+            recentSessions,
+          ] = await Promise.all([
+            getLatestBodyMetric(db, profile.id),
+            getTodayWaterLog(db, profile.id),
+            getTodayMacroSummary(db, profile.id),
+            getWeekSessionCount(db, profile.id),
+            getTodayCoachEntry(db, todayIso),
+            getActivePlan(db, profile.id),
+            getRecentSessions(db, profile.id, 7),
+          ])
+
+          // Derive the "next workout" — first plan day whose id hasn't
+          // already been logged in the last 7 days, falling back to the
+          // first day in the plan when everything is done (or nothing is).
+          let nextWorkoutName: string | null = null
+          let nextWorkoutPlanId: number | null = null
+          let nextWorkoutDayId: number | null = null
+
+          if (activePlan != null) {
+            const planDays = await getPlanDays(db, activePlan.id)
+            if (planDays.length > 0) {
+              const doneDayIds = new Set<number>()
+              for (const s of recentSessions) {
+                if (s.dayId != null) doneDayIds.add(s.dayId)
+              }
+              const nextDay =
+                planDays.find((d) => !doneDayIds.has(d.id)) ?? planDays[0]
+              nextWorkoutName = nextDay.dayName
+              nextWorkoutPlanId = activePlan.id
+              nextWorkoutDayId = nextDay.id
+            }
+          }
 
           if (cancelled) return
 
@@ -274,7 +320,9 @@ export function useDashboard(): UseDashboardResult {
             waterTarget: WATER_TARGET_ML,
             coachMessage: hint.message,
             coachTone: hint.tone,
-            nextWorkoutName: null,
+            nextWorkoutName,
+            nextWorkoutPlanId,
+            nextWorkoutDayId,
             todayLabel,
           })
         } finally {
