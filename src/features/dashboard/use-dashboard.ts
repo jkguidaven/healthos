@@ -8,7 +8,7 @@
  * already primed, and produces a `DashboardData` snapshot the screen can
  * render directly. All food / water / workout / coach values are currently
  * stubbed to 0 (or friendly fallbacks) because the underlying queries live
- * in later phases — see `HEALTHOS_PROJECT_GUIDE.md` build plan.
+ * in later phases — see `docs/project-guide.md` build plan.
  *
  * The hook is intentionally a light read — no writes, no AI calls — so it
  * can re-run cheaply whenever the tab comes into focus.

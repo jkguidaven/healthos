@@ -555,4 +555,4 @@ All text inputs use react-hook-form + Zod. Pattern:
 ---
 
 *Last updated: April 2026. Generated as part of HealthOS UX planning session.*
-*Reference this document alongside `HEALTHOS_PROJECT_GUIDE.md` when building any screen.*
+*Reference this document alongside `project-guide.md` when building any screen.*

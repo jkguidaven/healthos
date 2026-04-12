@@ -7,15 +7,13 @@ Primary goal: body recomposition. API key entered in-app, stored in SecureStore.
 
 | File | When to read |
 |---|---|
-| `HEALTHOS_PROJECT_GUIDE.md` | Starting any task — architecture, tech stack, build phases |
-| `HEALTHOS_UX_WIREFRAMES.md` | Building any screen — all 16 screens fully spec'd |
-| `ai-prompts.md` | Touching anything in `src/lib/ai/` — exact Gemini prompts + Zod schemas |
-| `api-key-flow.md` | Working on onboarding, settings, or the AI client (Gemini key lifecycle) |
-| `canonical-feature-example.ts` | Building a new feature — copy this pattern exactly |
-| `schema.ts` | Writing any database query — all table definitions |
-| `infrastructure.ts` | Setting up `ai-client.ts`, test utils, CI, or PR template |
-| `subagents.md` | Setting up `.claude/agents/` — schema reviewer, prompt tester, test writer |
-| `decisions/` | Understanding why a key decision was made |
+| `docs/project-guide.md` | Starting any task — architecture, tech stack, build phases |
+| `docs/ux-wireframes.md` | Building any screen — all 16 screens fully spec'd |
+| `docs/ai-prompts.md` | Touching anything in `src/lib/ai/` — exact Gemini prompts + Zod schemas |
+| `docs/api-key-flow.md` | Working on onboarding, settings, or the AI client (Gemini key lifecycle) |
+| `src/lib/db/schema.ts` | Writing any database query — all table definitions |
+| `docs/subagents.md` | Setting up `.claude/agents/` — schema reviewer, prompt tester, test writer |
+| `docs/decisions/` | Understanding why a key decision was made |
 
 ## Project map
 
@@ -58,7 +56,7 @@ pnpm prompt:test food-scan / workout-plan / coach
 - After prompt changes: run `pnpm prompt:test <feature>` before committing
 - **Platform guards for native-only APIs** — before using any `expo-*` or `react-native-*` API, verify it supports iOS, Android, AND web. If it doesn't (e.g. `expo-secure-store`, `expo-haptics`, `expo-notifications`, `expo-camera` web limits), wrap the call behind a `Platform.OS` branch with a working fallback for the unsupported platforms (e.g. `localStorage` for storage on web). Keep the platform branching inside the lowest-level wrapper module so feature code stays platform-agnostic. Past incident: `expo-secure-store` was called directly in `api-key.ts` and crashed the web build at boot with `ExpoSecureStore.default.getValueWithKeyAsync is not a function`.
 - **Use `npx expo install` for all Expo and React Native packages** — never `pnpm add` them directly. `npx expo install` resolves the version that matches the installed Expo SDK; `pnpm add` pulls latest, which is almost always wrong (e.g. installs SDK 55 packages onto an SDK 54 project). After installing, verify with `npx expo install --check`. If the warning ever appears, run `npx expo install --fix` to realign every drifted package in one shot. This applies to: anything starting with `expo-`, `@expo/`, `react-native-`, `react-native`, `react`, and any package the Expo team manages compatibility for (e.g. `react-native-svg`, `react-native-screens`, `react-native-safe-area-context`, `react-native-reanimated`, `jest-expo`).
-- **Always invoke the `frontend-design` skill before building or modifying any UI** — screens, components, modals, layouts, anything visual. The skill enforces distinctive, production-grade aesthetics and avoids generic AI defaults. Generic centered cards, default Tailwind grays, plain "screen title + form fields + button" stacks are NOT acceptable. Every screen should have intentional hierarchy, considered spacing, real visual weight, and feel like something a senior product designer signed off on. The wireframe specs in `HEALTHOS_UX_WIREFRAMES.md` describe layout structure, not aesthetic — go beyond the minimum and make it look polished.
+- **Always invoke the `frontend-design` skill before building or modifying any UI** — screens, components, modals, layouts, anything visual. The skill enforces distinctive, production-grade aesthetics and avoids generic AI defaults. Generic centered cards, default Tailwind grays, plain "screen title + form fields + button" stacks are NOT acceptable. Every screen should have intentional hierarchy, considered spacing, real visual weight, and feel like something a senior product designer signed off on. The wireframe specs in `docs/ux-wireframes.md` describe layout structure, not aesthetic — go beyond the minimum and make it look polished.
 
 ## Design system
 
