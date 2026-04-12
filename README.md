@@ -5,7 +5,7 @@ A personal AI-powered health companion for body recomposition. Tracks nutrition,
 Built with React Native + Expo + TypeScript. Runs on iOS and Android (and a limited web build).
 
 <p align="center">
-  <img src="docs/screenshots/hero.png" width="820" alt="HealthOS — onboarding, welcome screen, and daily food log on Android">
+  <img src="docs/screenshots/hero.png" width="820" alt="HealthOS — daily dashboard, AI-generated workout plan, and Gemini-powered coach insight on Android">
 </p>
 
 ## What it does
@@ -15,6 +15,47 @@ Built with React Native + Expo + TypeScript. Runs on iOS and Android (and a limi
 - **Body metrics** — body fat (Navy + FFMI), BMI, BMR, TDEE, weight trend, progress photos, and tape measurements.
 - **AI coach** — daily check-ins that synthesise food, training, and body data into one short, recomp-aware nudge.
 - **Privacy** — every byte lives in SQLite on-device. The only network calls are to Gemini (for AI features), Open Food Facts (barcode lookup), and WGER (exercise library).
+
+## Screens
+
+<table>
+  <tr>
+    <td align="center" width="25%">
+      <img src="docs/screenshots/welcome.png" width="200" alt="Welcome screen with HealthOS rings logo on a mint gradient">
+      <br/><sub><b>Welcome</b><br/>Mint-themed onboarding entry</sub>
+    </td>
+    <td align="center" width="25%">
+      <img src="docs/screenshots/onboarding-profile.png" width="200" alt="Profile form with age, sex, height, weight and live BMR estimate">
+      <br/><sub><b>Profile</b><br/>Live BMR as you type</sub>
+    </td>
+    <td align="center" width="25%">
+      <img src="docs/screenshots/onboarding-goal.png" width="200" alt="Goal selection with recomposition + activity level cards">
+      <br/><sub><b>Goal</b><br/>Recomp / bulk / cut + activity</sub>
+    </td>
+    <td align="center" width="25%">
+      <img src="docs/screenshots/dashboard.png" width="200" alt="Daily dashboard with calories, macros, daily insight, and today's workout CTA">
+      <br/><sub><b>Dashboard</b><br/>One screen, four pillars</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="25%">
+      <img src="docs/screenshots/food-log.png" width="200" alt="Food tab with photo scanner card, daily totals, water, and meal sections">
+      <br/><sub><b>Food log</b><br/>Photo, barcode, or manual</sub>
+    </td>
+    <td align="center" width="25%">
+      <img src="docs/screenshots/plan-generator.png" width="200" alt="Plan generator with split, days per week, duration, and equipment options">
+      <br/><sub><b>Plan generator</b><br/>Split · days · equipment</sub>
+    </td>
+    <td align="center" width="25%">
+      <img src="docs/screenshots/workout-plan.png" width="200" alt="Generated PPL workout plan with week strip and day cards listing exercises">
+      <br/><sub><b>Workout plan</b><br/>AI-generated, periodised</sub>
+    </td>
+    <td align="center" width="25%">
+      <img src="docs/screenshots/coach.png" width="200" alt="AI coach screen with Gemini-generated insight and weekly highlight">
+      <br/><sub><b>AI coach</b><br/>Daily Gemini insight</sub>
+    </td>
+  </tr>
+</table>
 
 ## Why this exists (and why it might not be for you)
 
