@@ -4,6 +4,10 @@ A personal AI-powered health companion for body recomposition. Tracks nutrition,
 
 Built with React Native + Expo + TypeScript. Runs on iOS and Android (and a limited web build).
 
+<p align="center">
+  <img src="docs/screenshots/hero.png" width="820" alt="HealthOS — onboarding, welcome screen, and daily food log on Android">
+</p>
+
 ## What it does
 
 - **Nutrition** — log meals by photo (Gemini vision), barcode (Open Food Facts), or manual entry. Tracks calories, macros, and water against personalised targets.
