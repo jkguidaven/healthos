@@ -96,4 +96,4 @@ If you're working on the codebase with Claude Code, [`CLAUDE.md`](./CLAUDE.md) a
 
 ## License
 
-MIT.
+[MIT](./LICENSE) © James Kenneth Guidaven
