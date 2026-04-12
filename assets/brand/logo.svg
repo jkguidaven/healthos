@@ -1,0 +1,13 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <!-- Mint variant — transparent background, three concentric rings -->
+  <!-- stroke-width 76 (~7.4% of 1024), 76px gaps, centered at (512, 512) -->
+
+  <!-- Outermost ring -->
+  <circle cx="512" cy="512" r="351.12" fill="none" stroke="#A7F3D0" stroke-width="76"/>
+
+  <!-- Middle ring -->
+  <circle cx="512" cy="512" r="199.12" fill="none" stroke="#5EEAD4" stroke-width="76"/>
+
+  <!-- Innermost ring -->
+  <circle cx="512" cy="512" r="47.12" fill="none" stroke="#2BBF9E" stroke-width="76"/>
+</svg>

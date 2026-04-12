@@ -1,0 +1,13 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <!-- White variant — transparent background, three concentric rings in pure white -->
+  <!-- For use on colored / mint backgrounds where the mint variant would disappear -->
+
+  <!-- Outermost ring -->
+  <circle cx="512" cy="512" r="351.12" fill="none" stroke="#FFFFFF" stroke-width="76" stroke-opacity="0.55"/>
+
+  <!-- Middle ring -->
+  <circle cx="512" cy="512" r="199.12" fill="none" stroke="#FFFFFF" stroke-width="76" stroke-opacity="0.78"/>
+
+  <!-- Innermost ring -->
+  <circle cx="512" cy="512" r="47.12" fill="none" stroke="#FFFFFF" stroke-width="76" stroke-opacity="1"/>
+</svg>

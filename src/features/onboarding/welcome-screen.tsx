@@ -3,6 +3,7 @@ import { Pressable, Text, View } from 'react-native'
 import { router } from 'expo-router'
 import { LinearGradient } from 'expo-linear-gradient'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { HealthLogo } from '@components/ui/health-logo'
 
 export function WelcomeScreen(): React.ReactElement {
   const handleGetStarted = (): void => {
@@ -33,22 +34,18 @@ export function WelcomeScreen(): React.ReactElement {
           {/* === SPACER TOP === */}
           <View className="flex-1" />
 
-          {/* === ICON / AVATAR === */}
-          <View className="items-center">
-            <View
-              className="h-32 w-32 rounded-full bg-white items-center justify-center"
-              style={{
-                shadowColor: '#1D9E75',
-                shadowOffset: { width: 0, height: 8 },
-                shadowOpacity: 0.15,
-                shadowRadius: 24,
-                elevation: 8,
-              }}
-            >
-              <View className="h-24 w-24 rounded-full bg-mint-400 items-center justify-center">
-                <Text className="font-sans-bold text-[44px] text-white">H</Text>
-              </View>
-            </View>
+          {/* === LOGO === */}
+          <View
+            className="items-center"
+            style={{
+              shadowColor: '#1D9E75',
+              shadowOffset: { width: 0, height: 10 },
+              shadowOpacity: 0.18,
+              shadowRadius: 28,
+              elevation: 6,
+            }}
+          >
+            <HealthLogo size={128} />
           </View>
 
           {/* === HEADLINE === */}
