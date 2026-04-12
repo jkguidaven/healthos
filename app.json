@@ -35,6 +35,13 @@
           "imageWidth": 220
         }
       ]
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "06cbe8d2-c803-44c1-87c3-ba8bf83a6f93"
+      }
+    },
+    "owner": "jkguidaven"
   }
 }
