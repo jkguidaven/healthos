@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HealthOS — Your AI health system. On your device.</title>
+  <meta name="description" content="Personal AI health companion for body recomposition. AI-generated workout plans, photo food logging, and a daily Gemini-powered coach. Local-first, open-source, bring-your-own API key." />
+
+  <meta property="og:title" content="HealthOS — Your AI health system. On your device." />
+  <meta property="og:description" content="Personal AI health companion for body recomposition. Local-first, open-source, bring-your-own Gemini key." />
+  <meta property="og:image" content="./screenshots/hero.png" />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="theme-color" content="#2BBF9E" />
+
+  <link rel="icon" type="image/png" href="../assets/favicon.png" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ════════════════════════════════════════════════════════════════
+       RESET
+       ════════════════════════════════════════════════════════════════ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+    body {
+      font-family: 'Poppins', system-ui, -apple-system, sans-serif;
+      color: var(--slate-900);
+      background: var(--white);
+      line-height: 1.65;
+      overflow-x: hidden;
+      -webkit-text-size-adjust: 100%;
+    }
+    img, svg { display: block; max-width: 100%; }
+    a { color: inherit; text-decoration: none; }
+    button { font-family: inherit; cursor: pointer; border: none; background: none; }
+    ul { list-style: none; }
+
+    /* ════════════════════════════════════════════════════════════════
+       THEME
+       ════════════════════════════════════════════════════════════════ */
+    :root {
+      --mint-50:  #ecfdf5;
+      --mint-100: #d1fae5;
+      --mint-200: #a7f3d0;
+      --mint-300: #6ee7b7;
+      --mint-400: #5EEAD4;
+      --mint-500: #2BBF9E;
+      --mint-600: #1D9E75;
+      --mint-700: #15805F;
+      --slate-900: #0f172a;
+      --slate-800: #1e293b;
+      --slate-700: #334155;
+      --slate-600: #475569;
+      --slate-500: #64748b;
+      --slate-400: #94a3b8;
+      --slate-200: #e2e8f0;
+      --slate-100: #f1f5f9;
+      --slate-50:  #f8fafc;
+      --white:     #ffffff;
+
+      --shadow-mint: 0 30px 80px -25px rgba(43, 191, 158, 0.40), 0 12px 32px -16px rgba(43, 191, 158, 0.20);
+      --shadow-soft: 0 20px 60px -20px rgba(15, 23, 42, 0.10);
+      --shadow-card: 0 10px 40px -16px rgba(15, 23, 42, 0.08);
+      --shadow-phone: 0 40px 80px -28px rgba(15, 23, 42, 0.25), 0 12px 24px -12px rgba(15, 23, 42, 0.10);
+    }
+
+    /* ════════════════════════════════════════════════════════════════
+       TYPE
+       ════════════════════════════════════════════════════════════════ */
+    .display {
+      font-weight: 700;
+      font-size: clamp(46px, 8vw, 92px);
+      line-height: 0.96;
+      letter-spacing: -0.038em;
+      color: var(--slate-900);
+    }
+    .display-2 {
+      font-weight: 700;
+      font-size: clamp(40px, 6.4vw, 76px);
+      line-height: 1;
+      letter-spacing: -0.032em;
+    }
+    .h1 {
+      font-weight: 700;
+      font-size: clamp(34px, 4.4vw, 56px);
+      line-height: 1.05;
+      letter-spacing: -0.025em;
+    }
+    .h2 {
+      font-weight: 700;
+      font-size: clamp(26px, 3vw, 36px);
+      line-height: 1.15;
+      letter-spacing: -0.018em;
+    }
+    .h3 {
+      font-weight: 600;
+      font-size: 20px;
+      line-height: 1.3;
+      letter-spacing: -0.01em;
+    }
+    .lead {
+      font-size: clamp(17px, 1.4vw, 20px);
+      line-height: 1.6;
+      color: var(--slate-600);
+      font-weight: 400;
+    }
+    .lead-large {
+      font-size: clamp(18px, 1.6vw, 22px);
+      line-height: 1.55;
+      color: var(--slate-700);
+      font-weight: 400;
+    }
+    .body { font-size: 15px; line-height: 1.65; color: var(--slate-600); }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--mint-600);
+      letter-spacing: 0.005em;
+    }
+    .eyebrow::before {
+      content: '';
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--mint-500);
+      box-shadow: 0 0 0 4px var(--mint-100);
+    }
+
+    /* ════════════════════════════════════════════════════════════════
+       LAYOUT
+       ════════════════════════════════════════════════════════════════ */
+    .container { max-width: 1240px; margin: 0 auto; padding: 0 32px; position: relative; }
+    .container-narrow { max-width: 880px; margin: 0 auto; padding: 0 32px; position: relative; }
+    section { padding: clamp(80px, 11vw, 140px) 0; position: relative; }
+    .stack > * + * { margin-top: var(--gap, 24px); }
+
+    /* ════════════════════════════════════════════════════════════════
+       ATMOSPHERIC BACKGROUND ELEMENTS
+       ════════════════════════════════════════════════════════════════ */
+    .blob {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(90px);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .blob-mint { background: radial-gradient(circle at center, var(--mint-300), transparent 70%); }
+    .blob-light { background: radial-gradient(circle at center, var(--mint-200), transparent 70%); }
+    .blob-deep { background: radial-gradient(circle at center, var(--mint-400), transparent 65%); opacity: 0.55; }
+
+    /* ════════════════════════════════════════════════════════════════
+       BUTTONS
+       ════════════════════════════════════════════════════════════════ */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 18px 30px;
+      border-radius: 9999px;
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: -0.005em;
+      transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+      white-space: nowrap;
+    }
+    .btn-primary {
+      background: var(--mint-500);
+      color: var(--white);
+      box-shadow: var(--shadow-mint);
+    }
+    .btn-primary:hover { transform: translateY(-2px); background: var(--mint-600); }
+    .btn-ghost {
+      background: var(--white);
+      color: var(--slate-800);
+      border: 1px solid var(--slate-200);
+    }
+    .btn-ghost:hover { border-color: var(--mint-500); color: var(--mint-700); }
+    .btn-arrow { transition: transform 0.18s ease; }
+    .btn:hover .btn-arrow { transform: translateX(3px); }
+
+    /* ════════════════════════════════════════════════════════════════
+       BRAND (shared: hero + footer)
+       ════════════════════════════════════════════════════════════════ */
+    .brand { display: inline-flex; align-items: center; gap: 14px; }
+    .brand-mark { width: 44px; height: 44px; }
+    .brand-name {
+      font-weight: 700;
+      font-size: 20px;
+      letter-spacing: -0.022em;
+      color: var(--slate-900);
+    }
+
+    /* ════════════════════════════════════════════════════════════════
+       HERO — centered, Apple product-walkthrough style
+       ════════════════════════════════════════════════════════════════ */
+    .hero {
+      padding: 140px 0 160px;
+      text-align: center;
+      background:
+        radial-gradient(ellipse 85% 55% at 50% 20%, var(--mint-100) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 50% 90%, var(--mint-50) 0%, transparent 70%),
+        var(--white);
+      overflow: hidden;
+      position: relative;
+    }
+    .hero::before {
+      /* Soft centered halo behind the headline */
+      content: '';
+      position: absolute;
+      top: 10%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 1200px;
+      height: 800px;
+      background: radial-gradient(ellipse at center, var(--mint-200) 0%, transparent 55%);
+      opacity: 0.35;
+      filter: blur(80px);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .hero .container { position: relative; z-index: 1; }
+
+    .hero-text {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .hero-brand {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      width: fit-content;
+      margin: 0 auto 64px;
+      padding: 18px 36px 18px 20px;
+      background: var(--white);
+      border: 1px solid var(--mint-100);
+      border-radius: 9999px;
+      box-shadow: 0 16px 40px -16px rgba(43, 191, 158, 0.30);
+    }
+    .hero-brand .brand-mark { width: 56px; height: 56px; }
+    .hero-brand .brand-name {
+      font-size: 22px;
+      letter-spacing: -0.025em;
+    }
+    .hero-eyebrow { margin-bottom: 32px; }
+    .hero-title {
+      font-size: clamp(48px, 9.2vw, 116px);
+      line-height: 0.94;
+      letter-spacing: -0.045em;
+      font-weight: 700;
+      margin-bottom: 32px;
+      color: var(--slate-900);
+    }
+    .hero-title .line-mint { color: var(--mint-600); }
+    .hero-sub {
+      max-width: 620px;
+      margin: 0 auto 48px;
+      font-size: clamp(18px, 1.5vw, 22px);
+      line-height: 1.55;
+      color: var(--slate-600);
+    }
+    .hero-cta-row {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 36px;
+    }
+    .hero-meta {
+      display: inline-flex;
+      align-items: center;
+      gap: 20px;
+      font-size: 13px;
+      color: var(--slate-500);
+      font-weight: 500;
+    }
+    .hero-meta-dot {
+      width: 3px;
+      height: 3px;
+      border-radius: 50%;
+      background: var(--slate-400);
+    }
+
+
+    /* ════════════════════════════════════════════════════════════════
+       SECTION HEAD (shared)
+       ════════════════════════════════════════════════════════════════ */
+    .section-head {
+      max-width: 760px;
+      margin-bottom: 64px;
+    }
+    .section-head.centered {
+      margin-left: auto;
+      margin-right: auto;
+      text-align: center;
+    }
+    .section-head .eyebrow { margin-bottom: 16px; }
+    .section-head .h1 { margin-bottom: 20px; }
+
+    /* ════════════════════════════════════════════════════════════════
+       PILLARS
+       ════════════════════════════════════════════════════════════════ */
+    .pillars { background: var(--white); }
+    .pillar-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+    }
+    .pillar {
+      background: var(--white);
+      border: 1px solid var(--slate-100);
+      border-radius: 28px;
+      padding: 36px 32px 40px;
+      position: relative;
+      transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+    }
+    .pillar:hover {
+      transform: translateY(-6px);
+      box-shadow: var(--shadow-card);
+      border-color: var(--mint-200);
+    }
+    .pillar-rings {
+      width: 44px;
+      height: 44px;
+      margin-bottom: 28px;
+    }
+    .pillar h3 {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      letter-spacing: -0.018em;
+    }
+    .pillar p {
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--slate-600);
+    }
+    .pillar-num {
+      position: absolute;
+      top: 24px;
+      right: 28px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--mint-500);
+      letter-spacing: 0.04em;
+    }
+
+    /* ════════════════════════════════════════════════════════════════
+       FEATURE BLOCK (alternating)
+       ════════════════════════════════════════════════════════════════ */
+    .feature {
+      background: var(--white);
+      overflow: hidden;
+      position: relative;
+    }
+    .feature.shaded { background: var(--mint-50); }
+    .feature.shaded .blob { opacity: 0.6; }
+    .feature .blob-a { width: 420px; height: 420px; top: -100px; left: -160px; }
+    .feature .blob-b { width: 360px; height: 360px; bottom: -120px; right: -120px; }
+
+    .feature-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 80px;
+      align-items: center;
+      position: relative;
+      z-index: 1;
+    }
+    .feature-grid.reverse .feature-text { order: 2; }
+    .feature-grid.reverse .feature-image { order: 1; }
+
+    .feature-text .eyebrow { margin-bottom: 18px; }
+    .feature-text .h1 { margin-bottom: 24px; }
+    .feature-text .lead { margin-bottom: 32px; max-width: 480px; }
+
+    .checklist { display: grid; gap: 14px; }
+    .checklist li {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      font-size: 15px;
+      color: var(--slate-700);
+      line-height: 1.5;
+    }
+    .checklist li::before {
+      content: '';
+      flex: 0 0 22px;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--mint-100);
+      margin-top: 2px;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M4 10l4 4 8-8' stroke='%231D9E75' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: center;
+    }
+
+    .feature-image {
+      position: relative;
+      display: flex;
+      justify-content: center;
+    }
+    .feature-image img {
+      max-width: 360px;
+      width: 100%;
+      border-radius: 32px;
+      box-shadow: var(--shadow-phone);
+      transform: rotate(-2deg);
+      transition: transform 0.4s ease;
+    }
+    .feature-image img:hover { transform: rotate(0deg) translateY(-4px); }
+    .feature-grid.reverse .feature-image img { transform: rotate(2deg); }
+    .feature-grid.reverse .feature-image img:hover { transform: rotate(0deg) translateY(-4px); }
+
+    /* For features that show two phones */
+    .feature-image-pair {
+      display: flex;
+      gap: 24px;
+      justify-content: center;
+      align-items: center;
+    }
+    .feature-image-pair img {
+      max-width: 280px;
+      border-radius: 28px;
+      box-shadow: var(--shadow-phone);
+    }
+    .feature-image-pair img:nth-child(1) { transform: rotate(-3deg) translateY(20px); }
+    .feature-image-pair img:nth-child(2) { transform: rotate(3deg) translateY(-20px); }
+
+    /* ════════════════════════════════════════════════════════════════
+       PRIVACY (full-bleed mint)
+       ════════════════════════════════════════════════════════════════ */
+    .privacy {
+      background: linear-gradient(180deg, var(--mint-500) 0%, var(--mint-600) 100%);
+      color: var(--white);
+      overflow: hidden;
+      position: relative;
+    }
+    .privacy::before, .privacy::after {
+      content: '';
+      position: absolute;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+    .privacy::before {
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(255,255,255,0.18), transparent 70%);
+      top: -200px;
+      left: -200px;
+    }
+    .privacy::after {
+      width: 480px;
+      height: 480px;
+      background: radial-gradient(circle, rgba(255,255,255,0.12), transparent 70%);
+      bottom: -160px;
+      right: -160px;
+    }
+    .privacy .container { position: relative; z-index: 1; }
+    .privacy .eyebrow { color: var(--mint-100); }
+    .privacy .eyebrow::before { background: var(--mint-200); box-shadow: 0 0 0 4px rgba(255,255,255,0.18); }
+    .privacy h2 { margin-bottom: 28px; max-width: 820px; }
+    .privacy .lead-large { color: rgba(255, 255, 255, 0.92); max-width: 760px; margin-bottom: 64px; }
+
+    .privacy-points {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 32px;
+    }
+    .privacy-point {
+      background: rgba(255, 255, 255, 0.10);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 24px;
+      padding: 32px 28px;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+    .privacy-point h4 {
+      font-size: 17px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: var(--white);
+      letter-spacing: -0.012em;
+    }
+    .privacy-point p {
+      font-size: 14px;
+      line-height: 1.6;
+      color: rgba(255, 255, 255, 0.84);
+    }
+
+    /* ════════════════════════════════════════════════════════════════
+       HONEST TRADE-OFFS — the differentiation move
+       ════════════════════════════════════════════════════════════════ */
+    .honest { background: var(--white); }
+    .honest .section-head { text-align: center; margin-left: auto; margin-right: auto; }
+    .honest-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 32px;
+      align-items: stretch;
+    }
+    .honest-col {
+      background: var(--white);
+      border: 1px solid var(--slate-100);
+      border-radius: 32px;
+      padding: 48px 44px;
+      position: relative;
+    }
+    .honest-col.pros { background: var(--mint-50); border-color: var(--mint-100); }
+    .honest-col h3 {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      letter-spacing: -0.018em;
+    }
+    .honest-col .col-sub {
+      font-size: 13px;
+      color: var(--slate-500);
+      margin-bottom: 32px;
+    }
+    .honest-col ul { display: grid; gap: 24px; }
+    .honest-col li {
+      display: grid;
+      grid-template-columns: 26px 1fr;
+      grid-template-rows: auto auto;
+      column-gap: 14px;
+      row-gap: 4px;
+      align-items: start;
+    }
+    .honest-col li::before {
+      content: '';
+      grid-column: 1;
+      grid-row: 1 / span 2;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      margin-top: 2px;
+      background-repeat: no-repeat;
+      background-position: center;
+      background-size: 18px 18px;
+    }
+    .honest-col.pros li::before {
+      background-color: var(--mint-200);
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M4 10l4 4 8-8' stroke='%231D9E75' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E");
+    }
+    .honest-col.cons li::before {
+      background-color: var(--slate-100);
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M6 10h8' stroke='%23475569' stroke-width='2.5' stroke-linecap='round' fill='none'/%3E%3C/svg%3E");
+    }
+    .honest-col li strong {
+      grid-column: 2;
+      grid-row: 1;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--slate-900);
+      line-height: 1.35;
+    }
+    .honest-col li span {
+      grid-column: 2;
+      grid-row: 2;
+      font-size: 14px;
+      color: var(--slate-600);
+      line-height: 1.55;
+    }
+
+    /* ════════════════════════════════════════════════════════════════
+       QUICK START
+       ════════════════════════════════════════════════════════════════ */
+    .quick-start { background: var(--mint-50); position: relative; overflow: hidden; }
+    .quick-start .blob-1 { width: 460px; height: 460px; top: -150px; right: -150px; }
+    .quick-start .blob-2 { width: 320px; height: 320px; bottom: -100px; left: -100px; }
+    .quick-start .container { position: relative; z-index: 1; }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 28px;
+      margin-top: 56px;
+    }
+    .step {
+      background: var(--white);
+      border-radius: 28px;
+      padding: 36px 32px;
+      box-shadow: var(--shadow-card);
+      display: flex;
+      flex-direction: column;
+    }
+    .step-num {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--mint-600);
+      letter-spacing: 0.04em;
+      margin-bottom: 14px;
+    }
+    .step h3 {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      letter-spacing: -0.018em;
+    }
+    .step p {
+      font-size: 14px;
+      color: var(--slate-600);
+      line-height: 1.6;
+      margin-bottom: 16px;
+    }
+    .step pre {
+      background: var(--slate-900);
+      color: var(--mint-200);
+      border-radius: 16px;
+      padding: 20px 22px;
+      font-size: 13px;
+      line-height: 1.65;
+      font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+      overflow-x: auto;
+      margin-top: auto;
+    }
+    .step pre code { color: inherit; font-family: inherit; }
+    .step pre .comment { color: var(--slate-500); }
+    .step a { color: var(--mint-700); font-weight: 600; border-bottom: 1px solid var(--mint-200); }
+
+    /* ════════════════════════════════════════════════════════════════
+       FOOTER
+       ════════════════════════════════════════════════════════════════ */
+    footer {
+      background: var(--slate-900);
+      color: var(--slate-400);
+      padding: 64px 0 48px;
+    }
+    .footer-inner {
+      display: grid;
+      grid-template-columns: 1fr 2fr 1fr;
+      gap: 48px;
+      align-items: center;
+    }
+    .footer-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--white);
+    }
+    .footer-brand .brand-name { color: var(--white); font-size: 17px; }
+    .footer-links {
+      display: flex;
+      gap: 28px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .footer-link {
+      font-size: 14px;
+      color: var(--slate-400);
+      transition: color 0.18s ease;
+    }
+    .footer-link:hover { color: var(--mint-300); }
+    .footer-meta {
+      font-size: 12px;
+      color: var(--slate-500);
+      text-align: right;
+    }
+
+    /* ════════════════════════════════════════════════════════════════
+       PAGE-LOAD REVEALS (CSS-only, staggered)
+       ════════════════════════════════════════════════════════════════ */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .reveal { animation: fadeUp 0.85s cubic-bezier(0.16, 1, 0.3, 1) backwards; }
+    .reveal-1 { animation-delay: 0.05s; }
+    .reveal-2 { animation-delay: 0.15s; }
+    .reveal-3 { animation-delay: 0.25s; }
+    .reveal-4 { animation-delay: 0.35s; }
+    .reveal-5 { animation-delay: 0.45s; }
+
+    /* ════════════════════════════════════════════════════════════════
+       RESPONSIVE
+       ════════════════════════════════════════════════════════════════ */
+    @media (max-width: 1024px) {
+      .hero { padding: 100px 0 120px; }
+      .feature-grid { grid-template-columns: 1fr; gap: 56px; }
+      .feature-grid.reverse .feature-text { order: 1; }
+      .feature-grid.reverse .feature-image { order: 2; }
+      .feature-image img { max-width: 320px; }
+      .pillar-grid { grid-template-columns: repeat(2, 1fr); }
+      .privacy-points { grid-template-columns: 1fr; gap: 20px; }
+      .honest-grid { grid-template-columns: 1fr; }
+      .steps { grid-template-columns: 1fr; }
+      .footer-inner { grid-template-columns: 1fr; gap: 32px; text-align: center; }
+      .footer-brand { justify-content: center; }
+      .footer-meta { text-align: center; }
+    }
+    @media (max-width: 720px) {
+      .container, .container-narrow { padding: 0 24px; }
+      .nav-inner { padding: 16px 24px; }
+      .nav-only-desktop { display: none; }
+      section { padding: 80px 0; }
+      .pillar-grid { grid-template-columns: 1fr; }
+      .honest-col { padding: 36px 28px; }
+      .step { padding: 32px 28px; }
+      .hero { padding: 72px 0 96px; }
+      .hero-brand {
+        margin-bottom: 44px;
+        padding: 12px 24px 12px 14px;
+        gap: 14px;
+      }
+      .hero-brand .brand-mark { width: 44px; height: 44px; }
+      .hero-brand .brand-name { font-size: 18px; }
+      .hero-cta-row { flex-direction: column; align-items: stretch; gap: 12px; }
+      .hero-meta { flex-wrap: wrap; justify-content: center; gap: 12px; }
+      .btn { width: 100%; }
+      .feature-image-pair { flex-direction: column; gap: 16px; }
+      .feature-image-pair img:nth-child(1),
+      .feature-image-pair img:nth-child(2) { transform: rotate(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <main id="top">
+
+    <!-- ═════════════════════ HERO ═════════════════════ -->
+    <section class="hero">
+      <div class="container">
+        <div class="hero-text">
+          <div class="hero-brand reveal reveal-1">
+            <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" class="brand-mark" aria-label="HealthOS logo">
+              <circle cx="512" cy="512" r="351.12" fill="none" stroke="#A7F3D0" stroke-width="76"/>
+              <circle cx="512" cy="512" r="199.12" fill="none" stroke="#5EEAD4" stroke-width="76"/>
+              <circle cx="512" cy="512" r="47.12" fill="none" stroke="#2BBF9E" stroke-width="76"/>
+            </svg>
+            <span class="brand-name">HealthOS</span>
+          </div>
+          <span class="eyebrow hero-eyebrow reveal reveal-2">Personal · local-first · open-source</span>
+          <h1 class="hero-title reveal reveal-3">
+            Your health.<br>
+            In one app.<br>
+            <span class="line-mint">On your device.</span>
+          </h1>
+          <p class="hero-sub reveal reveal-4">
+            AI-generated workout plans, photo food logging, and a daily coach that reads the last seven days of you. Local-first, bring-your-own key, no subscription.
+          </p>
+          <div class="hero-cta-row reveal reveal-5">
+            <a href="https://github.com/jkguidaven/healthos" class="btn btn-primary">
+              View on GitHub <span class="btn-arrow">→</span>
+            </a>
+            <a href="#features" class="btn btn-ghost">See how it works</a>
+          </div>
+          <div class="hero-meta reveal reveal-5">
+            <span>iOS · Android</span>
+            <span class="hero-meta-dot"></span>
+            <span>React Native · Expo</span>
+            <span class="hero-meta-dot"></span>
+            <span>MIT licensed</span>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ═════════════════════ PILLARS ═════════════════════ -->
+    <section class="pillars" id="features">
+      <div class="container">
+        <div class="section-head">
+          <span class="eyebrow">Four pillars, one app</span>
+          <h2 class="h1">Everything for body recomposition.</h2>
+          <p class="lead">Most fitness apps make you stitch together a food tracker, a workout planner, a body-fat calculator, and a coach. HealthOS is the four of them, in one calm interface, talking to each other.</p>
+        </div>
+
+        <div class="pillar-grid">
+          <article class="pillar">
+            <span class="pillar-num">01</span>
+            <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" class="pillar-rings">
+              <circle cx="512" cy="512" r="351.12" fill="none" stroke="#A7F3D0" stroke-width="90"/>
+              <circle cx="512" cy="512" r="199.12" fill="none" stroke="#5EEAD4" stroke-width="90"/>
+              <circle cx="512" cy="512" r="47.12" fill="none" stroke="#2BBF9E" stroke-width="90"/>
+            </svg>
+            <h3>Nutrition</h3>
+            <p>Snap a meal, get calories and macros from Gemini vision. Or scan a barcode. Or type it in. Daily totals against personalised targets.</p>
+          </article>
+
+          <article class="pillar">
+            <span class="pillar-num">02</span>
+            <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" class="pillar-rings">
+              <circle cx="512" cy="512" r="351.12" fill="none" stroke="#A7F3D0" stroke-width="90"/>
+              <circle cx="512" cy="512" r="199.12" fill="none" stroke="#5EEAD4" stroke-width="90"/>
+              <circle cx="512" cy="512" r="47.12" fill="none" stroke="#2BBF9E" stroke-width="90"/>
+            </svg>
+            <h3>Training</h3>
+            <p>AI generates a periodised plan from your split, equipment, and experience. Session logger tracks sets, reps, and progressive overload.</p>
+          </article>
+
+          <article class="pillar">
+            <span class="pillar-num">03</span>
+            <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" class="pillar-rings">
+              <circle cx="512" cy="512" r="351.12" fill="none" stroke="#A7F3D0" stroke-width="90"/>
+              <circle cx="512" cy="512" r="199.12" fill="none" stroke="#5EEAD4" stroke-width="90"/>
+              <circle cx="512" cy="512" r="47.12" fill="none" stroke="#2BBF9E" stroke-width="90"/>
+            </svg>
+            <h3>Body</h3>
+            <p>Body fat (Navy, FFMI), BMI, BMR, TDEE. Weight trend, tape measurements, progress photos — all framed as trends, not pass/fail.</p>
+          </article>
+
+          <article class="pillar">
+            <span class="pillar-num">04</span>
+            <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" class="pillar-rings">
+              <circle cx="512" cy="512" r="351.12" fill="none" stroke="#A7F3D0" stroke-width="90"/>
+              <circle cx="512" cy="512" r="199.12" fill="none" stroke="#5EEAD4" stroke-width="90"/>
+              <circle cx="512" cy="512" r="47.12" fill="none" stroke="#2BBF9E" stroke-width="90"/>
+            </svg>
+            <h3>Coach</h3>
+            <p>A short, daily, recomp-aware insight from Gemini that synthesises everything you logged. No motivational shouting. Just one helpful sentence.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═════════════════════ FEATURE 1 — Workout plans ═════════════════════ -->
+    <section class="feature shaded">
+      <div class="blob blob-light blob-a"></div>
+      <div class="blob blob-mint blob-b"></div>
+
+      <div class="container feature-grid">
+        <div class="feature-text">
+          <span class="eyebrow">AI workout plans</span>
+          <h2 class="h1">A new plan, built for you, in fifteen seconds.</h2>
+          <p class="lead">Tell HealthOS your training split, equipment, days per week, and experience level. Gemini returns a periodised PPL, Upper/Lower, or Full-Body programme — sets, reps, rest periods, and a rationale you can read and trust.</p>
+          <ul class="checklist">
+            <li>Periodised 4 to 12 weeks, with explicit progression rules</li>
+            <li>Built around the equipment you actually have</li>
+            <li>Compound lifts first, isolation last — coach-grade structure</li>
+            <li>Rationale you can read, so you understand the why</li>
+          </ul>
+        </div>
+        <div class="feature-image">
+          <img src="screenshots/workout-plan.png" alt="Generated PPL workout plan with day cards and exercise list" />
+        </div>
+      </div>
+    </section>
+
+    <!-- ═════════════════════ FEATURE 2 — Food logging ═════════════════════ -->
+    <section class="feature">
+      <div class="blob blob-mint blob-a"></div>
+
+      <div class="container feature-grid reverse">
+        <div class="feature-text">
+          <span class="eyebrow">Photo food logging</span>
+          <h2 class="h1">Point. Snap. Logged.</h2>
+          <p class="lead">No more typing "grilled chicken breast, 150g". Take a photo of your plate and Gemini's vision model identifies the ingredients, estimates portions, and writes the macros into your daily log. Wrong on something? Tap to fix it.</p>
+          <ul class="checklist">
+            <li>Calories and full macro breakdown from a single photo</li>
+            <li>Barcode fallback via Open Food Facts when you want exact</li>
+            <li>Manual entry always available, with portion calculator</li>
+            <li>Confidence indicator on every AI estimate</li>
+          </ul>
+        </div>
+        <div class="feature-image">
+          <img src="screenshots/food-log.png" alt="Food log screen showing scanner card, daily totals, and meal sections" />
+        </div>
+      </div>
+    </section>
+
+    <!-- ═════════════════════ FEATURE 3 — Daily coach ═════════════════════ -->
+    <section class="feature shaded">
+      <div class="blob blob-light blob-a"></div>
+      <div class="blob blob-mint blob-b"></div>
+
+      <div class="container feature-grid">
+        <div class="feature-text">
+          <span class="eyebrow">Daily coach</span>
+          <h2 class="h1">One sentence. Read in seven days of you.</h2>
+          <p class="lead">Every morning the coach reads the last seven days of food, training, and body data and writes you one short, recomp-aware insight. No motivational platitudes. No "crush it today" energy. Just the one thing that's actually worth knowing right now.</p>
+          <ul class="checklist">
+            <li>Synthesises nutrition + training + body data, not just one signal</li>
+            <li>Knows surplus on training days, slight deficit on rest days</li>
+            <li>Weekly highlight pulls out the win or the watch-out</li>
+            <li>Tone bucket (win / nudge / watch / neutral) drives the visual frame</li>
+          </ul>
+        </div>
+        <div class="feature-image">
+          <img src="screenshots/coach.png" alt="AI coach screen with Gemini-generated insight and weekly highlight" />
+        </div>
+      </div>
+    </section>
+
+    <!-- ═════════════════════ PRIVACY ═════════════════════ -->
+    <section class="privacy" id="privacy">
+      <div class="container">
+        <span class="eyebrow">Local-first by design</span>
+        <h2 class="display-2">Your data stays.</h2>
+        <p class="lead-large">Everything lives in SQLite on your device. No accounts, no cloud sync, no analytics. The only outbound calls are the AI features you trigger — and even those use a key only you control.</p>
+
+        <div class="privacy-points">
+          <div class="privacy-point">
+            <h4>No backend</h4>
+            <p>There is no server. There is no database we host. There is no copy of your history anywhere except on your phone.</p>
+          </div>
+          <div class="privacy-point">
+            <h4>Bring your own key</h4>
+            <p>You sign up for a free Gemini key once and paste it into onboarding. It's stored in the device secure enclave. We never see it.</p>
+          </div>
+          <div class="privacy-point">
+            <h4>Open source</h4>
+            <p>Every line is on GitHub, MIT licensed. Read the prompts. Audit the network calls. Fork it and ship your own.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═════════════════════ HONEST TRADE-OFFS ═════════════════════ -->
+    <section class="honest" id="honest">
+      <div class="container">
+        <div class="section-head centered">
+          <span class="eyebrow">Honest about it</span>
+          <h2 class="h1">Built for one. Maybe useful for you.</h2>
+          <p class="lead">Most landing pages bury the limitations. We give them equal billing — so you know what you're signing up for before you clone the repo.</p>
+        </div>
+
+        <div class="honest-grid">
+          <div class="honest-col pros">
+            <h3>What you get</h3>
+            <p class="col-sub">Things HealthOS does well.</p>
+            <ul>
+              <li>
+                <strong>Privacy by architecture</strong>
+                <span>Your data never leaves the device. Not "we promise" — there's literally no server to leave to.</span>
+              </li>
+              <li>
+                <strong>No subscription</strong>
+                <span>Bring a free Gemini key. Free tier covers ~1500 requests a day, comfortably enough for personal use.</span>
+              </li>
+              <li>
+                <strong>Recomp-tuned defaults</strong>
+                <span>Macros default to high-protein. The coach knows surplus-on-training-days. Trends, not daily pass/fail.</span>
+              </li>
+              <li>
+                <strong>AI features that work</strong>
+                <span>Photo food scanning, plan generation, daily coaching — all first-class, not bolted-on chat widgets.</span>
+              </li>
+              <li>
+                <strong>Forkable</strong>
+                <span>Plain TypeScript, well-tested formulas, MIT licensed. Tweak the prompts. Ship your own version.</span>
+              </li>
+            </ul>
+          </div>
+
+          <div class="honest-col cons">
+            <h3>What you don't get</h3>
+            <p class="col-sub">Trade-offs we made on purpose.</p>
+            <ul>
+              <li>
+                <strong>No cloud sync</strong>
+                <span>Switch phones and you lose history unless you export first. This is a deliberate trade-off, not an oversight.</span>
+              </li>
+              <li>
+                <strong>BYO API key</strong>
+                <span>You have to create a free Gemini key once during onboarding. It takes a minute, but it's an extra step.</span>
+              </li>
+              <li>
+                <strong>Free tier has limits</strong>
+                <span>Heavy users — lots of photo scans plus plan regenerations plus coaching — can hit Gemini's free quota.</span>
+              </li>
+              <li>
+                <strong>Personal project</strong>
+                <span>Built for one user (me). No support contract, no SLA, no roadmap commitments. Bugs may take a while.</span>
+              </li>
+              <li>
+                <strong>Not medical advice</strong>
+                <span>Formulas (BMR, TDEE, body fat estimates) are well-known approximations. Directional, not diagnostic.</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═════════════════════ QUICK START ═════════════════════ -->
+    <section class="quick-start" id="start">
+      <div class="blob blob-light blob-1"></div>
+      <div class="blob blob-mint blob-2"></div>
+
+      <div class="container">
+        <div class="section-head">
+          <span class="eyebrow">Quick start</span>
+          <h2 class="h1">Three steps. No accounts. No backend.</h2>
+        </div>
+
+        <div class="steps">
+          <div class="step">
+            <span class="step-num">Step 01</span>
+            <h3>Clone &amp; install</h3>
+            <p>You need Node 20+, pnpm, and either Xcode or Android Studio.</p>
+<pre><code>git clone https://github.com/jkguidaven/healthos.git
+cd healthos
+pnpm install</code></pre>
+          </div>
+
+          <div class="step">
+            <span class="step-num">Step 02</span>
+            <h3>Run on your phone</h3>
+            <p>One command, one simulator. Hot reload from there.</p>
+<pre><code>pnpm ios
+<span class="comment"># or</span>
+pnpm android</code></pre>
+          </div>
+
+          <div class="step">
+            <span class="step-num">Step 03</span>
+            <h3>Bring your key</h3>
+            <p>Get a free Gemini key from <a href="https://aistudio.google.com/app/apikey" rel="noopener">Google AI Studio</a> and paste it into the onboarding screen. It's stored in the device secure enclave.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ═════════════════════ FOOTER ═════════════════════ -->
+  <footer>
+    <div class="container footer-inner">
+      <div class="footer-brand">
+        <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" class="brand-mark" aria-label="HealthOS logo">
+          <circle cx="512" cy="512" r="351.12" fill="none" stroke="#A7F3D0" stroke-width="76"/>
+          <circle cx="512" cy="512" r="199.12" fill="none" stroke="#5EEAD4" stroke-width="76"/>
+          <circle cx="512" cy="512" r="47.12" fill="none" stroke="#2BBF9E" stroke-width="76"/>
+        </svg>
+        <span class="brand-name">HealthOS</span>
+      </div>
+      <div class="footer-links">
+        <a href="https://github.com/jkguidaven/healthos" class="footer-link">GitHub</a>
+        <a href="https://github.com/jkguidaven/healthos/blob/main/README.md" class="footer-link">README</a>
+        <a href="https://github.com/jkguidaven/healthos/tree/main/docs" class="footer-link">Docs</a>
+        <a href="https://github.com/jkguidaven/healthos/blob/main/LICENSE" class="footer-link">License</a>
+      </div>
+      <div class="footer-meta">© 2026 James Kenneth Guidaven · MIT</div>
+    </div>
+  </footer>
+
+</body>
+</html>
