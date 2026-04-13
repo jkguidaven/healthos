@@ -6,7 +6,7 @@
  * unit-tested against an in-memory SQLite instance.
  */
 
-import { and, eq, gte, lte } from 'drizzle-orm'
+import { and, desc, eq, gte, lte } from 'drizzle-orm'
 import type { ExpoSQLiteDatabase } from 'drizzle-orm/expo-sqlite'
 import {
   foodLogTable,
@@ -131,6 +131,78 @@ export async function getTodayMacroSummary(
     }),
     { calories: 0, proteinG: 0, carbsG: 0, fatG: 0, mealsLogged: 0 },
   )
+}
+
+/**
+ * Deduped list of foods the user has logged recently, sorted by how often
+ * they appear (most frequent first) and then by recency. Used by the food
+ * scan prompt as an identification anchor — if Gemini is unsure about a
+ * photo, it can prefer a match from this list since users tend to eat the
+ * same meals repeatedly.
+ *
+ * Only name + serving_description are returned: macros are deliberately
+ * omitted so the model always recomputes them from the visible portion.
+ *
+ * Names are deduped case-insensitively but we return the most-recent
+ * original casing for display-friendliness.
+ */
+export async function getRecentUniqueFoods(
+  db: DB,
+  profileId: number,
+  days: number = 14,
+  limit: number = 20,
+): Promise<Array<{ name: string; servingDescription: string | null }>> {
+  const fromDate = new Date()
+  fromDate.setDate(fromDate.getDate() - (days - 1))
+  const fromIso = fromDate.toISOString().split('T')[0]
+  const toIso = todayIso()
+
+  const rows = await db
+    .select({
+      name: foodLogTable.name,
+      servingDesc: foodLogTable.servingDesc,
+      createdAt: foodLogTable.createdAt,
+    })
+    .from(foodLogTable)
+    .where(
+      and(
+        eq(foodLogTable.profileId, profileId),
+        gte(foodLogTable.date, fromIso),
+        lte(foodLogTable.date, toIso),
+      ),
+    )
+    .orderBy(desc(foodLogTable.createdAt))
+
+  // Dedup case-insensitively, counting frequency, keeping the most recent
+  // casing + serving description as the canonical entry.
+  const bucket = new Map<
+    string,
+    { name: string; servingDescription: string | null; count: number; rank: number }
+  >()
+
+  rows.forEach((row, idx) => {
+    const key = row.name.trim().toLowerCase()
+    if (!key) return
+    const existing = bucket.get(key)
+    if (existing) {
+      existing.count += 1
+    } else {
+      bucket.set(key, {
+        name: row.name.trim(),
+        servingDescription: row.servingDesc,
+        count: 1,
+        rank: idx, // recency rank (lower = more recent)
+      })
+    }
+  })
+
+  return Array.from(bucket.values())
+    .sort((a, b) => {
+      if (b.count !== a.count) return b.count - a.count
+      return a.rank - b.rank
+    })
+    .slice(0, limit)
+    .map(({ name, servingDescription }) => ({ name, servingDescription }))
 }
 
 /**

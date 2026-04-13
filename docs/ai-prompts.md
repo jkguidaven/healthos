@@ -91,7 +91,18 @@ RULES:
 - confidence: "high" = clearly identifiable food with well-known nutrition profile. "medium" = identifiable but portion is ambiguous or it's a mixed dish. "low" = unrecognisable, heavily processed, or obstructed.
 - If you genuinely cannot identify the food at all, set name to "Unknown food" and confidence to "low" with all macros at 0.
 - Never refuse to respond. Always return the JSON structure even for uncertain cases.
+
+RECENT FOODS ANCHOR:
+- The user message may include a "Recent foods" list — dishes this user has logged in the past two weeks, most-frequent first. Users tend to eat the same meals repeatedly.
+- If your confidence from the image alone is HIGH, ignore the list and identify normally.
+- If your confidence would otherwise be MEDIUM or LOW, check whether the plate visually matches any recent food. If it does, use that food's name and (when sensible) its serving_description style, and bump confidence up one level.
+- NEVER copy macros from any recent food. Always recompute calories, protein_g, carbs_g and fat_g from the visible portion — the user's portion on this plate may differ from past meals.
+- Only anchor to a recent food when visual features are genuinely consistent. Do not force a match; a wrong anchor is worse than an honest "Unknown food".
 ```
+
+### Recent-foods anchor
+
+Before every scan (and rescan) `useFoodScanner` loads the user's deduped recent foods (`getRecentUniqueFoods`, window = 14 days, limit = 20 unique dishes, sorted by frequency then recency) and appends them to the user message as an "Recent foods" section. Only `name` and `serving_description` are sent — macros are deliberately omitted so the model always recomputes them from the visible portion.
 
 > Note: explicit "respond with JSON only, no markdown" instructions are no longer required because `responseMimeType: 'application/json'` enforces JSON output at the API level.
 
@@ -100,28 +111,21 @@ RULES:
 ```typescript
 // src/lib/ai/prompts/food-scan.ts
 
-export interface FoodScanInput {
-  imageBase64: string        // base64-encoded image, max 1024px longest side
-  mimeType: 'image/jpeg' | 'image/png' | 'image/webp'
-  mealContext?: string       // optional: 'breakfast' | 'lunch' | 'dinner' | 'snack'
+export interface RecentFoodAnchor {
+  name: string
+  servingDescription: string | null
 }
 
-export function buildFoodScanParts(input: FoodScanInput): GeminiPart[] {
-  return [
-    {
-      inlineData: {
-        mimeType: input.mimeType,
-        data: input.imageBase64,
-      },
-    },
-    {
-      text: input.mealContext
-        ? `Identify this food and estimate its macros. This is a ${input.mealContext} item.`
-        : 'Identify this food and estimate its macros.',
-    },
-  ]
+export interface FoodScanInput {
+  imageBase64: string                            // base64-encoded image, max 1024px longest side
+  mimeType: 'image/jpeg' | 'image/png' | 'image/webp'
+  mealContext?: string                           // optional: 'breakfast' | 'lunch' | 'dinner' | 'snack'
+  userContext?: string                           // optional free-text hint from the user on the confirm screen
+  recentFoods?: readonly RecentFoodAnchor[]      // deduped 14-day history, see "Recent-foods anchor" above
 }
 ```
+
+The text part is composed by joining up to three sections with blank lines: the base instruction, the user context (if any), and the recent-foods list (if any). See `buildFoodScanParts` in `src/lib/ai/prompts/food-scan.ts` for the exact template.
 
 ### Expected response shape
 

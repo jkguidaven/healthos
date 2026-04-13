@@ -15,7 +15,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 import { useCallback, useMemo } from 'react'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { useSQLiteContext } from 'expo-sqlite'
 import { drizzle } from 'drizzle-orm/expo-sqlite'
 
@@ -26,13 +26,22 @@ import {
   FoodScanResultSchema,
   buildFoodScanParts,
   type FoodScanResult,
+  type RecentFoodAnchor,
 } from '@ai/prompts/food-scan'
 import { APIKeyInvalidError } from '@ai/types'
 import { useApiKey } from '@ai/use-api-key'
-import { insertFoodLogEntry } from '@db/queries/food-log'
+import {
+  getRecentUniqueFoods,
+  insertFoodLogEntry,
+} from '@db/queries/food-log'
 import * as schema from '@db/schema'
 import type { NewFoodLogEntry } from '@db/schema'
 import { useProfileStore } from '@/stores/profile-store'
+
+/** How many days of history to surface as recent-food anchors. */
+const RECENT_FOODS_WINDOW_DAYS = 14
+/** Cap on unique foods passed into the prompt (keeps tokens bounded). */
+const RECENT_FOODS_LIMIT = 20
 
 export type ScannedFoodMeal = 'breakfast' | 'lunch' | 'dinner' | 'snack'
 
@@ -91,6 +100,31 @@ export function useFoodScanner(): UseFoodScannerReturn {
   const profile = useProfileStore((s) => s.profile)
   const { markInvalid: markApiKeyInvalid } = useApiKey()
 
+  // ─── Recent-foods anchor list ─────────────────────────────
+  // Fetched once per profile and cached. Every scan + rescan passes this
+  // into the prompt so Gemini can prefer a recent match when its own
+  // visual confidence is low. Short staleTime — the list is small, and
+  // newly-logged foods should show up on the next scan without a full
+  // app reload.
+  const { data: recentFoods } = useQuery<readonly RecentFoodAnchor[]>({
+    queryKey: ['food-scan', 'recent-foods', profile?.id ?? null],
+    queryFn: async () => {
+      if (!profile) return []
+      const rows = await getRecentUniqueFoods(
+        db,
+        profile.id,
+        RECENT_FOODS_WINDOW_DAYS,
+        RECENT_FOODS_LIMIT,
+      )
+      return rows.map((r) => ({
+        name: r.name,
+        servingDescription: r.servingDescription,
+      }))
+    },
+    enabled: !!profile,
+    staleTime: 60_000,
+  })
+
   // ─── Step 1: scan ──────────────────────────────────────────
   // Errors from callAI() (APIKeyMissingError, APIKeyInvalidError,
   // AIParseError, AIApiError, AIRateLimitError) are intentionally
@@ -108,6 +142,7 @@ export function useFoodScanner(): UseFoodScannerReturn {
           mimeType,
           mealContext,
           userContext,
+          recentFoods,
         }),
         schema: FoodScanResultSchema,
         responseSchema: FoodScanGeminiSchema,

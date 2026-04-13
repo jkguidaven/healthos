@@ -23,7 +23,19 @@ RULES:
 - If you genuinely cannot identify the food at all, set name to "Unknown food" and confidence to "low" with all macros at 0.
 - Never refuse to respond. Always return the structured result, even for uncertain cases.
 
+RECENT FOODS ANCHOR:
+- The user message may include a "Recent foods" list — dishes this user has logged in the past two weeks, most-frequent first. Users tend to eat the same meals repeatedly.
+- If your confidence from the image alone is HIGH, ignore the list and identify normally.
+- If your confidence would otherwise be MEDIUM or LOW, check whether the plate visually matches any recent food. If it does, use that food's name and (when sensible) its serving_description style, and bump confidence up one level.
+- NEVER copy macros from any recent food. Always recompute calories, protein_g, carbs_g and fat_g from the visible portion — the user's portion on this plate may differ from past meals.
+- Only anchor to a recent food when visual features are genuinely consistent. Do not force a match; a wrong anchor is worse than an honest "Unknown food".
+
 The response schema is enforced. You MUST use these exact field names: name, calories, protein_g, carbs_g, fat_g, serving_description, confidence, notes.`
+
+export interface RecentFoodAnchor {
+  name: string
+  servingDescription: string | null
+}
 
 export interface FoodScanInput {
   imageBase64: string
@@ -35,6 +47,12 @@ export interface FoodScanInput {
    * when they conflict — the user is looking at the real plate.
    */
   userContext?: string
+  /**
+   * Optional list of dishes the user has logged recently. Used as an
+   * identification anchor only when the model's confidence would otherwise
+   * be medium/low. Macros must still be recomputed from the visible portion.
+   */
+  recentFoods?: readonly RecentFoodAnchor[]
 }
 
 export function buildFoodScanParts(input: FoodScanInput): ContentBlock[] {
@@ -43,9 +61,26 @@ export function buildFoodScanParts(input: FoodScanInput): ContentBlock[] {
     : 'Identify this food and estimate its macros.'
 
   const hint = input.userContext?.trim()
-  const text = hint
-    ? `${base}\n\nThe user provided this additional context — trust it over visual guesses when they conflict, and recompute the macros accordingly: "${hint}"`
-    : base
+  const sections: string[] = [base]
+
+  if (hint) {
+    sections.push(
+      `The user provided this additional context — trust it over visual guesses when they conflict, and recompute the macros accordingly: "${hint}"`,
+    )
+  }
+
+  const recent = (input.recentFoods ?? []).filter((f) => f.name.trim() !== '')
+  if (recent.length > 0) {
+    const lines = recent.map((f, i) => {
+      const serving = f.servingDescription?.trim()
+      return serving
+        ? `${i + 1}. ${f.name} (usually ${serving})`
+        : `${i + 1}. ${f.name}`
+    })
+    sections.push(
+      `Recent foods this user has logged in the last 14 days (most frequent first). Use only if you are not highly confident from the image alone — and recompute macros from the visible portion, do NOT copy serving macros:\n${lines.join('\n')}`,
+    )
+  }
 
   return [
     {
@@ -56,7 +91,7 @@ export function buildFoodScanParts(input: FoodScanInput): ContentBlock[] {
         data: input.imageBase64,
       },
     },
-    { type: 'text', text },
+    { type: 'text', text: sections.join('\n\n') },
   ]
 }
 
