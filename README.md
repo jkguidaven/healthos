@@ -109,6 +109,62 @@ pnpm db:migrate     # Apply migrations
 
 When adding or upgrading any Expo / React Native package, use `npx expo install <pkg>` instead of `pnpm add` so the version aligns with the installed Expo SDK.
 
+## Build an Android APK
+
+If you've forked the project and want to sideload a release build onto your own Android device, you can build it locally with EAS. No paid Expo plan required.
+
+### One-time setup
+
+1. **Install JDK 17** (the Android Gradle Plugin requires it):
+   ```bash
+   brew install openjdk@17
+   ```
+
+2. **Install the Android SDK.** Either install [Android Studio](https://developer.android.com/studio) (easiest — it handles the SDK for you), or install the command-line tools only:
+   ```bash
+   brew install --cask android-commandlinetools
+   ```
+
+3. **Install the NDK + set up `ANDROID_HOME`.** Add to your shell profile (`~/.zshrc` or `~/.bashrc`):
+   ```bash
+   export ANDROID_HOME="$HOME/Library/Android/sdk"   # or wherever your SDK lives
+   export ANDROID_SDK_ROOT="$ANDROID_HOME"
+   export PATH="$PATH:$ANDROID_HOME/platform-tools"
+   ```
+   Then install the NDK version Expo SDK 54 expects:
+   ```bash
+   yes | sdkmanager --sdk_root=$ANDROID_HOME --install "ndk;27.1.12297006"
+   ```
+
+4. **Install the EAS CLI and log in** (free Expo account):
+   ```bash
+   npm install -g eas-cli
+   eas login
+   ```
+
+5. **Initialise the EAS project** (first time only, creates the project on expo.dev):
+   ```bash
+   eas init
+   ```
+
+### Build the APK
+
+```bash
+eas build -p android --profile preview --local
+```
+
+The `preview` profile in [`eas.json`](./eas.json) is configured to output an `.apk` (not an `.aab`) and sets `JAVA_HOME`, `ANDROID_HOME`, and `ANDROID_SDK_ROOT` for the build subprocess. When the build finishes you'll find a `build-*.apk` file at the repo root.
+
+**First build is slow** (10–20 min) while Gradle downloads dependencies. Subsequent builds are much faster.
+
+### Install it on a device
+
+```bash
+adb install build-*.apk
+```
+
+Or copy the APK onto your phone and open it — Android will prompt you to allow installs from unknown sources.
+
 ## Project layout
 
 ```
