@@ -13,6 +13,7 @@ import {
   Poppins_700Bold,
 } from '@expo-google-fonts/poppins'
 import migration0000 from '../src/lib/db/migrations/0000_handy_lucky_pierre.sql'
+import migration0001 from '../src/lib/db/migrations/0001_military_garia.sql'
 import { hydrateApiKeyStatus } from '../src/lib/ai/api-key'
 import {
   notificationsSupported,
@@ -49,6 +50,7 @@ async function runMigrations(db: SQLiteDatabase): Promise<void> {
 
   const APPLIED: readonly { tag: string; sql: string }[] = [
     { tag: '0000_handy_lucky_pierre', sql: migration0000 },
+    { tag: '0001_military_garia', sql: migration0001 },
   ]
 
   for (const m of APPLIED) {

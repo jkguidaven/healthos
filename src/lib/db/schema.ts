@@ -310,6 +310,25 @@ export type CoachEntry    = typeof coachEntryTable.$inferSelect
 export type NewCoachEntry = typeof coachEntryTable.$inferInsert
 
 // ─────────────────────────────────────────────
+// COACH MESSAGE
+// Persistent chat history between the user and the AI coach.
+// One row per turn (user or assistant).
+// ─────────────────────────────────────────────
+
+export const coachMessageTable = sqliteTable('coach_message', {
+  id:          integer('id').primaryKey({ autoIncrement: true }),
+  profileId:   integer('profile_id').notNull().references(() => profileTable.id),
+
+  role:        text('role', { enum: ['user', 'assistant'] }).notNull(),
+  content:     text('content').notNull(),
+
+  createdAt:   text('created_at').notNull().default(sql`(datetime('now'))`),
+})
+
+export type CoachMessage    = typeof coachMessageTable.$inferSelect
+export type NewCoachMessage = typeof coachMessageTable.$inferInsert
+
+// ─────────────────────────────────────────────
 // CONVENIENCE: all tables exported as a group
 // Useful for drizzle-kit config and migrations.
 // ─────────────────────────────────────────────
@@ -326,4 +345,5 @@ export const schema = {
   session:        sessionTable,
   sessionSet:     sessionSetTable,
   coachEntry:     coachEntryTable,
+  coachMessage:   coachMessageTable,
 }

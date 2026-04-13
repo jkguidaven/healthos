@@ -230,6 +230,193 @@ export async function callAI<T>(params: CallAIParams<T>): Promise<T> {
   return result.data
 }
 
+// ═══════════════════════════════════════════════════════════════
+// CHAT MODE — multi-turn conversations with optional function calling.
+// ─────────────────────────────────────────────────────────────
+// Used by the coach chat feature. Unlike callAI(), this returns free
+// text OR a function call (the caller runs the tool and loops).
+//
+// Gemini function-calling docs:
+//   https://ai.google.dev/gemini-api/docs/function-calling
+// ═══════════════════════════════════════════════════════════════
+
+export interface GeminiToolSchema {
+  type: 'OBJECT'
+  properties?: Record<string, GeminiResponseSchema>
+  required?: string[]
+}
+
+export interface GeminiFunctionDeclaration {
+  name: string
+  description: string
+  parameters?: GeminiToolSchema
+}
+
+export type ChatTurn =
+  | { role: 'user'; text: string }
+  | { role: 'assistant'; text: string }
+  | { role: 'assistant'; functionCall: { name: string; args: Record<string, unknown> } }
+  | { role: 'tool'; name: string; response: unknown }
+
+export interface CallAIChatParams {
+  system: string
+  turns: ChatTurn[]
+  tools?: GeminiFunctionDeclaration[]
+  maxTokens: number
+}
+
+export type ChatResult =
+  | { kind: 'text'; text: string }
+  | { kind: 'functionCall'; name: string; args: Record<string, unknown> }
+
+interface GeminiContent {
+  role: 'user' | 'model'
+  parts: (
+    | { text: string }
+    | { functionCall: { name: string; args: Record<string, unknown> } }
+    | { functionResponse: { name: string; response: { content: unknown } } }
+  )[]
+}
+
+function turnsToContents(turns: ChatTurn[]): GeminiContent[] {
+  const out: GeminiContent[] = []
+  for (const turn of turns) {
+    if (turn.role === 'user') {
+      out.push({ role: 'user', parts: [{ text: turn.text }] })
+    } else if (turn.role === 'assistant') {
+      if ('text' in turn) {
+        out.push({ role: 'model', parts: [{ text: turn.text }] })
+      } else {
+        out.push({
+          role: 'model',
+          parts: [{ functionCall: turn.functionCall }],
+        })
+      }
+    } else {
+      // tool response — Gemini expects role 'user' with a functionResponse part
+      out.push({
+        role: 'user',
+        parts: [
+          {
+            functionResponse: {
+              name: turn.name,
+              response: { content: turn.response },
+            },
+          },
+        ],
+      })
+    }
+  }
+  return out
+}
+
+export async function callAIChat(params: CallAIChatParams): Promise<ChatResult> {
+  const apiKey = await getApiKey()
+  if (!apiKey) throw new APIKeyMissingError()
+
+  const body: Record<string, unknown> = {
+    contents: turnsToContents(params.turns),
+    systemInstruction: { parts: [{ text: params.system }] },
+    generationConfig: {
+      maxOutputTokens: params.maxTokens,
+      thinkingConfig: { thinkingBudget: 0 },
+    },
+  }
+  if (params.tools && params.tools.length > 0) {
+    body.tools = [{ functionDeclarations: params.tools }]
+  }
+
+  const url = `${API_URL}?key=${encodeURIComponent(apiKey)}`
+
+  let response: Response | null = null
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+    if (!RETRYABLE_STATUSES.has(response.status)) break
+    if (attempt === MAX_RETRIES) break
+    const delay = attempt === 0 ? 1500 : 4000
+    await sleep(delay)
+  }
+
+  if (!response) throw new AIApiError(0)
+
+  if (!response.ok) {
+    if (response.status === 401 || response.status === 403) {
+      throw new APIKeyInvalidError()
+    }
+    if (response.status === 429) {
+      const retryAfter = parseInt(response.headers.get('retry-after') ?? '60', 10)
+      throw new AIRateLimitError(retryAfter)
+    }
+    if (response.status === 400) {
+      try {
+        const text = await response.text()
+        if (/api key/i.test(text) || /API_KEY_INVALID/i.test(text)) {
+          throw new APIKeyInvalidError()
+        }
+      } catch (e) {
+        if (e instanceof APIKeyInvalidError) throw e
+      }
+    }
+    throw new AIApiError(response.status)
+  }
+
+  const data: unknown = await response.json()
+  const fc = extractFunctionCall(data)
+  if (fc) {
+    return { kind: 'functionCall', name: fc.name, args: fc.args }
+  }
+  const text = extractText(data)
+  if (text.length === 0) {
+    console.warn('[callAIChat] Empty response. Raw:', JSON.stringify(data).slice(0, 1500))
+    throw new AIParseError('')
+  }
+  return { kind: 'text', text }
+}
+
+function extractFunctionCall(
+  data: unknown,
+): { name: string; args: Record<string, unknown> } | null {
+  if (
+    typeof data !== 'object' ||
+    data === null ||
+    !('candidates' in data) ||
+    !Array.isArray((data as { candidates: unknown }).candidates)
+  ) return null
+  const first = (data as { candidates: unknown[] }).candidates[0]
+  if (
+    typeof first !== 'object' ||
+    first === null ||
+    !('content' in first) ||
+    typeof (first as { content: unknown }).content !== 'object' ||
+    (first as { content: unknown }).content === null
+  ) return null
+  const content = (first as { content: { parts?: unknown } }).content
+  if (!('parts' in content) || !Array.isArray(content.parts)) return null
+  for (const part of content.parts) {
+    if (
+      typeof part === 'object' &&
+      part !== null &&
+      'functionCall' in part &&
+      typeof (part as { functionCall: unknown }).functionCall === 'object' &&
+      (part as { functionCall: unknown }).functionCall !== null
+    ) {
+      const fc = (part as { functionCall: { name?: unknown; args?: unknown } }).functionCall
+      if (typeof fc.name === 'string') {
+        const args =
+          typeof fc.args === 'object' && fc.args !== null
+            ? (fc.args as Record<string, unknown>)
+            : {}
+        return { name: fc.name, args }
+      }
+    }
+  }
+  return null
+}
+
 /**
  * Pull `candidates[0].finishReason` out of a Gemini response shape.
  * Returns null if absent. Useful for distinguishing legitimate parse

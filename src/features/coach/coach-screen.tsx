@@ -23,6 +23,8 @@ import React from 'react'
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
+import { router } from 'expo-router'
+
 import { ApiKeyBanner } from '@components/ui/api-key-banner'
 import { useCoach } from './use-coach'
 import type { CoachResult } from '@/lib/ai/prompts/coach'
@@ -86,6 +88,47 @@ export function CoachScreen(): React.ReactElement {
               {formatHeaderDate(new Date())}
             </Text>
           </View>
+
+          {/* Chat CTA — jumps to the conversational coach */}
+          {!needsProfile ? (
+            <Pressable
+              onPress={() => router.push('/coach-chat')}
+              accessibilityRole="button"
+              accessibilityLabel="Chat with your coach"
+              className="mt-5 flex-row items-center justify-between overflow-hidden rounded-3xl bg-mint-500 px-5 py-4 active:opacity-80"
+              style={{
+                shadowColor: '#1D9E75',
+                shadowOpacity: 0.3,
+                shadowRadius: 16,
+                shadowOffset: { width: 0, height: 6 },
+                elevation: 6,
+              }}
+            >
+              <View className="flex-1 pr-3">
+                <Text
+                  className="font-sans-semibold text-[11px] text-mint-50"
+                  style={{ letterSpacing: 0.4 }}
+                >
+                  NEW
+                </Text>
+                <Text
+                  className="mt-1 font-sans-bold text-[17px] text-white"
+                  style={{ letterSpacing: -0.2 }}
+                >
+                  Chat with your coach
+                </Text>
+                <Text
+                  className="mt-0.5 font-sans text-[12px] text-mint-50"
+                  style={{ lineHeight: 16 }}
+                >
+                  Ask anything about your training, food, or progress.
+                </Text>
+              </View>
+              <View className="h-10 w-10 items-center justify-center rounded-full bg-white/20">
+                <Text className="font-sans-bold text-[18px] text-white">→</Text>
+              </View>
+            </Pressable>
+          ) : null}
 
           {/* Inline API key banner — self-renders nothing if the key is fine.
               Sits between the header and the body so it's the first thing the
