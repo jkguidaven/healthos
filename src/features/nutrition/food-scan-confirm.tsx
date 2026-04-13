@@ -45,7 +45,7 @@ import { StatusBar } from 'expo-status-bar'
 import { Button } from '@components/ui/button'
 import { MacroBar } from '@components/ui/macro-bar'
 import type { FoodScanResult } from '@ai/prompts/food-scan'
-import { useScanStore } from '@/stores/scan-store'
+import { useScanStore, type ScanSource } from '@/stores/scan-store'
 import { useFoodScanner, type ScannedFoodMeal } from './use-food-scanner'
 
 // ═══════════════════════════════════════════════════════════════
@@ -91,6 +91,8 @@ export function FoodScanConfirmScreen(): React.ReactElement {
   const storedResult = useScanStore((s) => s.result)
   const storedBase64 = useScanStore((s) => s.imageBase64)
   const storedMimeType = useScanStore((s) => s.imageMimeType)
+  const storedSource = useScanStore((s) => s.source)
+  const setScan = useScanStore((s) => s.setScan)
   const clearScan = useScanStore((s) => s.clear)
 
   if (!storedResult) {
@@ -102,6 +104,8 @@ export function FoodScanConfirmScreen(): React.ReactElement {
       initialResult={storedResult}
       imageBase64={storedBase64}
       imageMimeType={storedMimeType}
+      source={storedSource}
+      setScan={setScan}
       onClear={clearScan}
     />
   )
@@ -115,6 +119,13 @@ interface LoadedConfirmProps {
   initialResult: FoodScanResult
   imageBase64: string | null
   imageMimeType: 'image/jpeg' | 'image/png' | 'image/webp' | null
+  source: ScanSource
+  setScan: (
+    result: FoodScanResult,
+    imageBase64?: string | null,
+    imageMimeType?: 'image/jpeg' | 'image/png' | 'image/webp' | null,
+    source?: ScanSource,
+  ) => void
   onClear: () => void
 }
 
@@ -122,14 +133,25 @@ function LoadedConfirm({
   initialResult,
   imageBase64,
   imageMimeType,
+  source,
+  setScan,
   onClear,
 }: LoadedConfirmProps): React.ReactElement {
-  const { save, isSaving, saveError, saveSuccess } = useFoodScanner()
+  const {
+    save,
+    isSaving,
+    saveError,
+    saveSuccess,
+    scan,
+    isScanning,
+    scanError,
+  } = useFoodScanner()
 
   const [edited, setEdited] = useState<FoodScanResult>(initialResult)
   const [portion, setPortion] = useState<Portion>(1)
   const [meal, setMeal] = useState<ScannedFoodMeal>(() => defaultMealForNow())
   const [editMode, setEditMode] = useState<boolean>(false)
+  const [contextHint, setContextHint] = useState<string>('')
 
   // ─── Success flourish ────────────────────────────────────────
   // After a successful save we briefly show a check mark before
@@ -167,6 +189,34 @@ function LoadedConfirm({
     void save({ result: edited, meal, portion })
   }, [save, edited, meal, portion])
 
+  const canRescan =
+    source === 'ai'
+    && imageBase64 !== null
+    && imageMimeType !== null
+    && contextHint.trim().length > 0
+    && !isScanning
+    && !isSaving
+
+  const handleRescan = useCallback((): void => {
+    if (!imageBase64 || !imageMimeType) return
+    const hint = contextHint.trim()
+    if (!hint) return
+    void (async () => {
+      try {
+        const next = await scan({
+          imageBase64,
+          mimeType: imageMimeType,
+          mealContext: meal,
+          userContext: hint,
+        })
+        setEdited(next)
+        setScan(next, imageBase64, imageMimeType, 'ai')
+      } catch {
+        // scanError is surfaced via the hook; the card shows it inline.
+      }
+    })()
+  }, [imageBase64, imageMimeType, contextHint, scan, meal, setScan])
+
   const toggleEditMode = useCallback((): void => {
     setEditMode((prev) => !prev)
   }, [])
@@ -192,6 +242,11 @@ function LoadedConfirm({
     if (!saveError) return null
     return saveError.message || 'Couldn\u2019t save this meal. Try again.'
   }, [saveError])
+
+  const rescanErrorMessage = useMemo<string | null>(() => {
+    if (!scanError) return null
+    return scanError.message || 'Couldn\u2019t rescan with that context. Try again.'
+  }, [scanError])
 
   return (
     <View className="flex-1 bg-white">
@@ -366,6 +421,65 @@ function LoadedConfirm({
                 />
               </View>
             </View>
+
+            {/* ═══ Context / rescan card (AI scans only) ═══ */}
+            {source === 'ai' && imageBase64 ? (
+              <View className="mt-4 rounded-3xl border border-slate-100 bg-white p-5">
+                <Text className="font-sans-semibold text-[13px] text-slate-900">
+                  Not quite right?
+                </Text>
+                <Text className="mt-1 font-sans text-[12px] text-slate-500">
+                  Tell us what this actually is — dish, ingredients, portion —
+                  and we{'\u2019'}ll recompute the macros.
+                </Text>
+
+                <TextInput
+                  value={contextHint}
+                  onChangeText={setContextHint}
+                  placeholder="e.g. chicken adobo, ~2 cups, cooked in soy & vinegar"
+                  placeholderTextColor="#8A9494"
+                  multiline
+                  editable={!isScanning}
+                  className="mt-3 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 font-sans-medium text-[14px] text-slate-900"
+                  style={{ minHeight: 64, textAlignVertical: 'top' }}
+                  maxLength={300}
+                />
+
+                {rescanErrorMessage ? (
+                  <Text className="mt-2 font-sans-medium text-[12px] text-brand-coral">
+                    {rescanErrorMessage}
+                  </Text>
+                ) : null}
+
+                <Pressable
+                  onPress={handleRescan}
+                  disabled={!canRescan}
+                  accessibilityRole="button"
+                  accessibilityLabel="Rescan with context"
+                  accessibilityState={{ disabled: !canRescan, busy: isScanning }}
+                  className={`mt-3 self-start rounded-full px-5 py-2.5 active:opacity-80 ${
+                    canRescan ? 'bg-mint-500' : 'bg-slate-100'
+                  }`}
+                >
+                  {isScanning ? (
+                    <View className="flex-row items-center gap-2">
+                      <ActivityIndicator size="small" color="#ffffff" />
+                      <Text className="font-sans-semibold text-[13px] text-white">
+                        Rescanning…
+                      </Text>
+                    </View>
+                  ) : (
+                    <Text
+                      className={`font-sans-semibold text-[13px] ${
+                        canRescan ? 'text-white' : 'text-slate-400'
+                      }`}
+                    >
+                      Rescan with context
+                    </Text>
+                  )}
+                </Pressable>
+              </View>
+            ) : null}
 
             {/* ═══ Portion card ═══ */}
             <SelectorCard label="Portion">

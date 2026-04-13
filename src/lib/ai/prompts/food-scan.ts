@@ -29,9 +29,24 @@ export interface FoodScanInput {
   imageBase64: string
   mimeType: 'image/jpeg' | 'image/png' | 'image/webp'
   mealContext?: 'breakfast' | 'lunch' | 'dinner' | 'snack'
+  /**
+   * Optional free-text hint from the user to disambiguate the dish, its
+   * ingredients, or the portion size. Trust the hint over visual guesses
+   * when they conflict — the user is looking at the real plate.
+   */
+  userContext?: string
 }
 
 export function buildFoodScanParts(input: FoodScanInput): ContentBlock[] {
+  const base = input.mealContext
+    ? `Identify this food and estimate its macros. This is a ${input.mealContext} item.`
+    : 'Identify this food and estimate its macros.'
+
+  const hint = input.userContext?.trim()
+  const text = hint
+    ? `${base}\n\nThe user provided this additional context — trust it over visual guesses when they conflict, and recompute the macros accordingly: "${hint}"`
+    : base
+
   return [
     {
       type: 'image',
@@ -41,12 +56,7 @@ export function buildFoodScanParts(input: FoodScanInput): ContentBlock[] {
         data: input.imageBase64,
       },
     },
-    {
-      type: 'text',
-      text: input.mealContext
-        ? `Identify this food and estimate its macros. This is a ${input.mealContext} item.`
-        : 'Identify this food and estimate its macros.',
-    },
+    { type: 'text', text },
   ]
 }
 

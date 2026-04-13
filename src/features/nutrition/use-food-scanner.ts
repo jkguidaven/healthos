@@ -40,6 +40,8 @@ export interface ScanFoodArgs {
   imageBase64: string
   mimeType: 'image/jpeg' | 'image/png' | 'image/webp'
   mealContext?: ScannedFoodMeal
+  /** Optional user-supplied hint to disambiguate the dish or portion. */
+  userContext?: string
 }
 
 export interface SaveScannedFoodArgs {
@@ -98,10 +100,15 @@ export function useFoodScanner(): UseFoodScannerReturn {
   // when the failure is auth-related so the inline banner shows up
   // instantly across every AI surface.
   const scanMutation = useMutation<FoodScanResult, Error, ScanFoodArgs>({
-    mutationFn: async ({ imageBase64, mimeType, mealContext }) => {
+    mutationFn: async ({ imageBase64, mimeType, mealContext, userContext }) => {
       return callAI({
         system: FOOD_SCAN_SYSTEM_PROMPT,
-        userMessage: buildFoodScanParts({ imageBase64, mimeType, mealContext }),
+        userMessage: buildFoodScanParts({
+          imageBase64,
+          mimeType,
+          mealContext,
+          userContext,
+        }),
         schema: FoodScanResultSchema,
         responseSchema: FoodScanGeminiSchema,
         maxTokens: 1024,
