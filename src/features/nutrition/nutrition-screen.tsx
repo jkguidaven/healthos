@@ -27,6 +27,8 @@ import {
   type NutritionByMeal,
   type NutritionData,
 } from './use-food-log'
+import { usePlateCoach } from './use-plate-coach'
+import { PlateCoachCard } from './plate-coach-card'
 import { useWaterLog, type WaterLogData } from './use-water-log'
 
 // ─────────────────────────────────────────────
@@ -54,6 +56,10 @@ const MEAL_ORDER: readonly MealConfig[] = [
 export function NutritionScreen(): React.ReactElement {
   const { data, deleteEntry } = useFoodLog()
   const { data: waterData } = useWaterLog()
+  const plateCoach = usePlateCoach({
+    summary: data.summary,
+    byMeal: data.byMeal,
+  })
 
   const handleOpenScan = useCallback((): void => {
     router.push('/(tabs)/food/scan')
@@ -118,6 +124,8 @@ export function NutritionScreen(): React.ReactElement {
           <ScanCtaCard onPress={handleOpenScan} />
 
           <TodaySummaryCard data={data} />
+
+          <PlateCoachCard coach={plateCoach} />
 
           <WaterShortcutCard data={waterData} onPress={handleOpenWater} />
 

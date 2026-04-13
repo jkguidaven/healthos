@@ -205,6 +205,90 @@ export async function getRecentUniqueFoods(
     .map(({ name, servingDescription }) => ({ name, servingDescription }))
 }
 
+export interface RecentFoodWithMacros {
+  name: string
+  servingDescription: string | null
+  calories: number
+  proteinG: number
+  carbsG: number
+  fatG: number
+  /** Number of times this food appears in the window. */
+  count: number
+}
+
+/**
+ * Like {@link getRecentUniqueFoods}, but carries the macros from the most
+ * recent occurrence of each food. Used by the plate-coach formula to rank
+ * recent foods by protein density and fit them into the day's remaining
+ * macro budget.
+ *
+ * We deliberately use the *most recent* occurrence's macros rather than an
+ * average — portion sizes vary meal-to-meal, and averaging can produce a
+ * value the user has never actually logged. The most recent log is also
+ * what the user is most likely to repeat tomorrow.
+ */
+export async function getRecentFoodsWithMacros(
+  db: DB,
+  profileId: number,
+  days: number = 14,
+  limit: number = 20,
+): Promise<RecentFoodWithMacros[]> {
+  const fromDate = new Date()
+  fromDate.setDate(fromDate.getDate() - (days - 1))
+  const fromIso = fromDate.toISOString().split('T')[0]
+  const toIso = todayIso()
+
+  const rows = await db
+    .select({
+      name: foodLogTable.name,
+      servingDesc: foodLogTable.servingDesc,
+      calories: foodLogTable.calories,
+      proteinG: foodLogTable.proteinG,
+      carbsG: foodLogTable.carbsG,
+      fatG: foodLogTable.fatG,
+      createdAt: foodLogTable.createdAt,
+    })
+    .from(foodLogTable)
+    .where(
+      and(
+        eq(foodLogTable.profileId, profileId),
+        gte(foodLogTable.date, fromIso),
+        lte(foodLogTable.date, toIso),
+      ),
+    )
+    .orderBy(desc(foodLogTable.createdAt))
+
+  const bucket = new Map<string, RecentFoodWithMacros & { rank: number }>()
+
+  rows.forEach((row, idx) => {
+    const key = row.name.trim().toLowerCase()
+    if (!key) return
+    const existing = bucket.get(key)
+    if (existing) {
+      existing.count += 1
+      return
+    }
+    bucket.set(key, {
+      name: row.name.trim(),
+      servingDescription: row.servingDesc,
+      calories: row.calories,
+      proteinG: row.proteinG,
+      carbsG: row.carbsG,
+      fatG: row.fatG,
+      count: 1,
+      rank: idx,
+    })
+  })
+
+  return Array.from(bucket.values())
+    .sort((a, b) => {
+      if (b.count !== a.count) return b.count - a.count
+      return a.rank - b.rank
+    })
+    .slice(0, limit)
+    .map(({ rank: _rank, ...rest }) => rest)
+}
+
 /**
  * Compute 7-day averages for nutrition. Used by the AI coach context.
  * Returns zeroed fields if there's no data in the window.
