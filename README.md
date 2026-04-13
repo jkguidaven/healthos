@@ -155,8 +155,6 @@ eas build -p android --profile preview --local
 
 The `preview` profile in [`eas.json`](./eas.json) is configured to output an `.apk` (not an `.aab`) and sets `JAVA_HOME`, `ANDROID_HOME`, and `ANDROID_SDK_ROOT` for the build subprocess. When the build finishes you'll find a `build-*.apk` file at the repo root.
 
-**First build is slow** (10–20 min) while Gradle downloads dependencies. Subsequent builds are much faster.
-
 ### Install it on a device
 
 ```bash
