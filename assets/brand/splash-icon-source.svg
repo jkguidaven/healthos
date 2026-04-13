@@ -1,0 +1,9 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <!-- Transparent background — expo-splash-screen paints the backgroundColor underneath -->
+  <!-- Logo scaled to ~55% of canvas so Android 12+ circular splash doesn't clip it -->
+  <g transform="translate(512, 512) scale(0.72) translate(-512, -512)">
+    <circle cx="512" cy="512" r="351.12" fill="none" stroke="#FFFFFF" stroke-width="76" stroke-opacity="0.55"/>
+    <circle cx="512" cy="512" r="199.12" fill="none" stroke="#FFFFFF" stroke-width="76" stroke-opacity="0.78"/>
+    <circle cx="512" cy="512" r="47.12" fill="none" stroke="#FFFFFF" stroke-width="76" stroke-opacity="1"/>
+  </g>
+</svg>
