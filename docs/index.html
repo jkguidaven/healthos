@@ -631,6 +631,16 @@
     .step pre code { color: inherit; font-family: inherit; }
     .step pre .comment { color: var(--slate-500); }
     .step a { color: var(--mint-700); font-weight: 600; border-bottom: 1px solid var(--mint-200); }
+    .step-foot { margin-top: 18px; margin-bottom: 0; font-size: 13px; }
+    .start-note {
+      text-align: center;
+      max-width: 620px;
+      margin: 48px auto 0;
+      font-size: 14px;
+      color: var(--slate-600);
+      line-height: 1.7;
+    }
+    .start-note a { color: var(--mint-700); font-weight: 600; border-bottom: 1px solid var(--mint-200); }
 
     /* ════════════════════════════════════════════════════════════════
        FOOTER
@@ -986,42 +996,46 @@
       </div>
     </section>
 
-    <!-- ═════════════════════ QUICK START ═════════════════════ -->
+    <!-- ═════════════════════ GET IT RUNNING ═════════════════════ -->
     <section class="quick-start" id="start">
       <div class="blob blob-light blob-1"></div>
       <div class="blob blob-mint blob-2"></div>
 
       <div class="container">
         <div class="section-head">
-          <span class="eyebrow">Quick start</span>
-          <h2 class="h1">Three steps. No accounts. No backend.</h2>
+          <span class="eyebrow">Get it running</span>
+          <h2 class="h1">Three ways. Pick the one that fits.</h2>
         </div>
 
         <div class="steps">
           <div class="step">
-            <span class="step-num">Step 01</span>
-            <h3>Clone &amp; install</h3>
-            <p>You need Node 20+, pnpm, and either Xcode or Android Studio.</p>
-<pre><code>git clone https://github.com/jkguidaven/healthos.git
-cd healthos
-pnpm install</code></pre>
+            <span class="step-num">Fastest</span>
+            <h3>Expo Go</h3>
+            <p>Install <a href="https://expo.dev/client" rel="noopener">Expo Go</a> on your phone, then scan the QR. No Xcode, no Android Studio.</p>
+<pre><code>pnpm install
+pnpm start</code></pre>
           </div>
 
           <div class="step">
-            <span class="step-num">Step 02</span>
-            <h3>Run on your phone</h3>
-            <p>One command, one simulator. Hot reload from there.</p>
+            <span class="step-num">Dev loop</span>
+            <h3>Run locally</h3>
+            <p>Full native build with hot reload. Needs Xcode or Android Studio.</p>
 <pre><code>pnpm ios
 <span class="comment"># or</span>
 pnpm android</code></pre>
           </div>
 
           <div class="step">
-            <span class="step-num">Step 03</span>
-            <h3>Bring your key</h3>
-            <p>Get a free Gemini key from <a href="https://aistudio.google.com/app/apikey" rel="noopener">Google AI Studio</a> and paste it into the onboarding screen. It's stored in the device secure enclave.</p>
+            <span class="step-num">Sideload</span>
+            <h3>Build an APK</h3>
+            <p>Fork it, build it, install it on your own device — no Play Store, no servers.</p>
+<pre><code>eas build -p android \
+  --profile preview --local</code></pre>
+            <p class="step-foot"><a href="https://github.com/jkguidaven/healthos#build-an-android-apk" rel="noopener">Full setup guide →</a></p>
           </div>
         </div>
+
+        <p class="start-note">You'll paste a free <a href="https://aistudio.google.com/app/apikey" rel="noopener">Gemini API key</a> during onboarding — stored in the device secure enclave, never sent anywhere else.</p>
       </div>
     </section>
 
