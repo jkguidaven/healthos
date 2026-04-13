@@ -24,3 +24,7 @@ coverage/
 # Expo
 ios/
 android/
+
+# Build artifacts
+*.apk
+*.aab
